@@ -1,0 +1,210 @@
+import Quotation from "../model/quotationModel.js";
+import Customer from "../model/customerModel.js";
+import Product from "../model/productModel.js";
+import { getNextSequence } from "../model/counterModel.js";
+import { calculateLineItems, sumItems, computeGrandTotal } from "../utils/calculateTotals.js";
+import { validateLineItems, isValidObjectId } from "../utils/validators.js";
+import { generateDocumentPdf } from "../utils/pdfGenerator.js";
+
+// @desc   New quotation
+// @route  POST /api/v1/quotations
+export const createQuotation = async (req, res, next) => {
+  try {
+    const { customer: customerId, dateOfQuotation, attn, items, discount, vatPercent } = req.body;
+
+    if (!customerId || !isValidObjectId(customerId)) {
+      return res.status(400).json({ success: false, message: "A valid customer is required" });
+    }
+    if (!dateOfQuotation) {
+      return res.status(400).json({ success: false, message: "Date of quotation is required" });
+    }
+
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      return res.status(404).json({ success: false, message: "Customer not found" });
+    }
+
+    const validationError = validateLineItems(items, "price");
+    if (validationError) {
+      return res.status(400).json({ success: false, message: validationError });
+    }
+
+    const productIds = items.map((i) => i.product);
+    const products = await Product.find({ _id: { $in: productIds } });
+    if (products.length !== new Set(productIds).size) {
+      return res.status(400).json({ success: false, message: "One or more products are invalid" });
+    }
+
+    const lineItems = calculateLineItems(items, "price");
+    const subTotal = sumItems(lineItems, "totalPrice");
+    const totals = computeGrandTotal({ subTotal, discount: discount || 0, vatPercent: vatPercent || 0 });
+
+    const quotationNo = await getNextSequence("quotation", "QTN-");
+
+    const quotation = await Quotation.create({
+      quotationNo,
+      customer: customerId,
+      dateOfQuotation,
+      // ATTN defaults to the customer's contact person name unless the user overrides it.
+      attn: attn || customer.contactPersonName,
+      items: lineItems,
+      discount: discount || 0,
+      subTotal: totals.subTotal,
+      vatPercent: vatPercent || 0,
+      vatAmount: totals.vatAmount,
+      totalAmount: totals.totalAmount,
+      salesPerson: req.body.salesPerson || req.user._id,
+      createdBy: req.user._id,
+    });
+
+    // Generate a PDF copy of the quotation.
+    const productMap = new Map(products.map((p) => [String(p._id), p]));
+    const pdfPath = await generateDocumentPdf({
+      title: "QUOTATION",
+      docNumber: quotation.quotationNo,
+      fileNamePrefix: "quotation",
+      metaLines: [
+        { label: "Date", value: new Date(dateOfQuotation).toDateString() },
+        { label: "ATTN", value: quotation.attn },
+      ],
+      customer: {
+        companyName: customer.companyName,
+        contactPersonName: customer.contactPersonName,
+        companyAddress: customer.companyAddress,
+        mobileNumber: customer.mobileNumber,
+      },
+      items: lineItems.map((i) => ({
+        name: productMap.get(String(i.product))?.name || "Product",
+        qty: i.qty,
+        price: i.price,
+        total: i.totalPrice,
+      })),
+      summaryLines: [
+        { label: "Subtotal", value: totals.subTotal.toFixed(2) },
+        { label: "Discount", value: Number(discount || 0).toFixed(2) },
+        { label: `VAT (${vatPercent || 0}%)`, value: totals.vatAmount.toFixed(2) },
+        { label: "Total", value: totals.totalAmount.toFixed(2) },
+      ],
+    });
+
+    quotation.pdfUrl = `/${pdfPath}`;
+    await quotation.save();
+
+    res.status(201).json({ success: true, message: "Quotation created successfully", data: quotation });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc   List quotations (used e.g. when generating an invoice "from quotation")
+// @route  GET /api/v1/quotations?status=Open
+export const getAllQuotations = async (req, res, next) => {
+  try {
+    const { status, customerId } = req.query;
+    const filter = {};
+    if (status) filter.status = status;
+    if (customerId) filter.customer = customerId;
+
+    const quotations = await Quotation.find(filter)
+      .populate("customer", "companyName contactPersonName")
+      .populate("salesPerson", "name")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, message: "Quotations fetched", data: quotations });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc   Get single quotation
+// @route  GET /api/v1/quotations/:id
+export const getQuotationById = async (req, res, next) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid quotation id" });
+    }
+    const quotation = await Quotation.findById(req.params.id)
+      .populate("customer")
+      .populate("salesPerson", "name")
+      .populate("items.product", "name itemCode");
+    if (!quotation) {
+      return res.status(404).json({ success: false, message: "Quotation not found" });
+    }
+    res.status(200).json({ success: true, message: "Quotation fetched", data: quotation });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc   Cancel a quotation
+// @route  PUT /api/v1/quotations/:id/cancel
+export const cancelQuotation = async (req, res, next) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid quotation id" });
+    }
+    const quotation = await Quotation.findById(req.params.id);
+    if (!quotation) {
+      return res.status(404).json({ success: false, message: "Quotation not found" });
+    }
+    if (quotation.status === "Converted") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Cannot cancel a quotation that has already been converted to an invoice" });
+    }
+    quotation.status = "Cancelled";
+    await quotation.save();
+    res.status(200).json({ success: true, message: "Quotation cancelled successfully", data: quotation });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ---------- Reports ----------
+
+// @desc   Customer wise quotation report
+// @route  GET /api/v1/quotations/reports/customer-wise?customerId=&from=&to=
+export const customerWiseQuotationReport = async (req, res, next) => {
+  try {
+    const { customerId, from, to } = req.query;
+    if (!customerId || !isValidObjectId(customerId)) {
+      return res.status(400).json({ success: false, message: "A valid customerId is required" });
+    }
+    const filter = { customer: customerId };
+    if (from || to) {
+      filter.dateOfQuotation = {};
+      if (from) filter.dateOfQuotation.$gte = new Date(from);
+      if (to) filter.dateOfQuotation.$lte = new Date(to);
+    }
+    const quotations = await Quotation.find(filter)
+      .populate("customer", "companyName")
+      .sort({ dateOfQuotation: -1 });
+    res.status(200).json({ success: true, message: "Report generated", data: quotations });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc   Salesman wise quotation report
+// @route  GET /api/v1/quotations/reports/salesman-wise?salesPersonId=&from=&to=
+export const salesmanWiseQuotationReport = async (req, res, next) => {
+  try {
+    const { salesPersonId, from, to } = req.query;
+    if (!salesPersonId || !isValidObjectId(salesPersonId)) {
+      return res.status(400).json({ success: false, message: "A valid salesPersonId is required" });
+    }
+    const filter = { salesPerson: salesPersonId };
+    if (from || to) {
+      filter.dateOfQuotation = {};
+      if (from) filter.dateOfQuotation.$gte = new Date(from);
+      if (to) filter.dateOfQuotation.$lte = new Date(to);
+    }
+    const quotations = await Quotation.find(filter)
+      .populate("customer", "companyName")
+      .populate("salesPerson", "name")
+      .sort({ dateOfQuotation: -1 });
+    res.status(200).json({ success: true, message: "Report generated", data: quotations });
+  } catch (err) {
+    next(err);
+  }
+};
