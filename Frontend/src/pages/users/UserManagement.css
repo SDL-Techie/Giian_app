@@ -1,0 +1,51 @@
+.users-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.permissions-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.permissions-matrix th {
+  background-color: var(--bg-muted);
+  padding: 10px 14px;
+  text-align: center;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.permissions-matrix th:first-child {
+  text-align: left;
+}
+
+.permissions-matrix td {
+  padding: 10px 14px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-color-subtle);
+}
+
+.permissions-matrix td:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+.permission-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.responsive-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.admin-form-stack { display:flex; flex-direction:column; gap:16px; }
+.permissions-scroll { overflow-x:auto; }
+.modal-actions { display:flex; justify-content:flex-end; gap:12px; flex-wrap:wrap; margin-top:8px; }
+@media (max-width: 640px) { .responsive-actions { width:100%; } .responsive-actions > * { flex:1; } .modal-actions > * { flex:1; } }

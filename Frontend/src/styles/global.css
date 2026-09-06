@@ -1,0 +1,127 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  font-family: var(--font-family);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--bg-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Responsive application primitives */
+@media (max-width: 768px) {
+  .page-header { align-items: flex-start !important; flex-direction: column; gap: 14px; }
+  .page-header > div:last-child { max-width: 100%; }
+  .filter-bar { align-items: stretch !important; }
+  .filter-bar > div { width: 100% !important; min-width: 0 !important; }
+  .form-grid-2 { grid-template-columns: 1fr !important; }
+  .page-tabs { overflow-x: auto; max-width: 100%; scrollbar-width: thin; }
+  .page-tab-btn { white-space: nowrap; flex: 0 0 auto; }
+  .data-table th, .data-table td { padding: 11px 12px; }
+  .table-responsive { -webkit-overflow-scrolling: touch; }
+}
+
+@media (max-width: 480px) {
+  .page-title { font-size: clamp(1.35rem, 7vw, 1.75rem) !important; }
+  .card { border-radius: var(--radius-md) !important; }
+  .table-actions { gap: 4px; }
+  .action-icon-btn { min-width: 36px; min-height: 36px; }
+}
+
+/* giian production interaction spacing */
+.page-header > div:last-child,
+.table-actions,
+.form-actions,
+.modal-actions,
+.header-actions,
+.action-buttons,
+.button-group {
+  gap: 12px;
+}
+button, .btn {
+  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, border-color .16s ease, color .16s ease;
+}
+button:active, .btn:active { transform: translateY(1px); }
+:focus-visible { outline: 3px solid rgba(167, 134, 87, .28); outline-offset: 2px; }
+
+
+/* Data transfer actions stay directly below page headers and never overlap. */
+.data-transfer-bar {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 0 14px;
+}
+.data-transfer-bar .btn {
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 480px) {
+  .data-transfer-bar { flex-wrap: nowrap; }
+  .data-transfer-bar .btn { flex: 1 1 0; justify-content: center; }
+}

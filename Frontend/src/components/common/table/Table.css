@@ -1,0 +1,77 @@
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background-color: var(--bg-surface);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--font-size-sm);
+}
+
+.data-table th {
+  background-color: var(--bg-muted);
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color-subtle);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+  background-color: var(--bg-hover);
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.action-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  transition: all 0.15s;
+  background-color: transparent;
+}
+
+.action-icon-btn:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-muted);
+}
+
+.action-icon-btn.btn-edit:hover {
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.action-icon-btn.btn-delete:hover {
+  color: var(--color-danger);
+  background-color: var(--color-danger-light);
+}
+
+.action-icon-btn.btn-view:hover {
+  color: var(--color-secondary);
+  background-color: var(--color-secondary-light);
+}

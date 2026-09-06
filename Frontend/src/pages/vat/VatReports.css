@@ -1,0 +1,51 @@
+.vat-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.vat-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.vat-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+}
+
+.vat-card-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.vat-card-amount {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.vat-card-amount.paid {
+  color: var(--color-warning);
+}
+
+.vat-card-amount.collected {
+  color: var(--color-success);
+}
+
+.vat-card-amount.net {
+  color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+  .vat-summary-cards {
+    grid-template-columns: 1fr;
+  }
+}
