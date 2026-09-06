@@ -1,47 +1,26 @@
-// Centralized error handler - keeps every controller's catch blocks
-// simple while guaranteeing consistent, safe JSON error responses.
+import { logger } from "../utils/logger.js";
+
 export const notFound = (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route not found - ${req.originalUrl}`,
-  });
+  res.status(404).json({ success: false, message: `Route not found - ${req.originalUrl}`, requestId: req.requestId });
 };
 
-export const errorHandler = (err, req, res, next) => {
-  console.error(err);
-
-  let statusCode = err.statusCode || 500;
-  let message = err.message || "Internal Server Error";
-
-  // Mongoose bad ObjectId
-  if (err.name === "CastError") {
-    statusCode = 400;
-    message = `Invalid ${err.path}: ${err.value}`;
-  }
-
-  // Mongoose validation error
-  if (err.name === "ValidationError") {
-    statusCode = 400;
-    message = Object.values(err.errors)
-      .map((val) => val.message)
-      .join(", ");
-  }
-
-  // Mongoose duplicate key
-  if (err.code === 11000) {
-    statusCode = 409;
-    const field = Object.keys(err.keyValue || {})[0];
-    message = `Duplicate value for field: ${field}`;
-  }
-
-  // Multer errors
-  if (err.name === "MulterError") {
-    statusCode = 400;
-  }
-
-  res.status(statusCode).json({
-    success: false,
-    message,
-    // Stack traces are never sent to the client, only logged above.
+export const errorHandler = (err, req, res, _next) => {
+  logger.error("Request failed", {
+    requestId: req.requestId,
+    method: req.method,
+    path: req.originalUrl,
+    statusCode: err.statusCode || 500,
+    error: err.message,
+    ...(process.env.NODE_ENV !== "production" && err.stack ? { stack: err.stack } : {}),
   });
+
+  let statusCode = err.statusCode || err.status || 500;
+  let message = statusCode >= 500 && process.env.NODE_ENV === "production" ? "Internal Server Error" : (err.message || "Internal Server Error");
+
+  if (err.name === "CastError") { statusCode = 400; message = `Invalid ${err.path}`; }
+  if (err.name === "ValidationError") { statusCode = 400; message = Object.values(err.errors).map((v) => v.message).join(", "); }
+  if (err.code === 11000) { statusCode = 409; message = `Duplicate value for field: ${Object.keys(err.keyValue || {})[0] || "unique field"}`; }
+  if (err.name === "MulterError") { statusCode = 400; message = err.message; }
+
+  res.status(statusCode).json({ success: false, message, requestId: req.requestId });
 };

@@ -83,9 +83,8 @@ const quotationSchema = new mongoose.Schema(
       enum: ["Open", "Converted", "Cancelled"],
       default: "Open",
     },
-    pdfUrl: {
-      type: String,
-    },
+    pdfUrl: { type: String },
+    pdfDubaiUrl: { type: String },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -95,5 +94,9 @@ const quotationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+
+quotationSchema.index({customer:1,dateOfQuotation:-1});
+quotationSchema.index({salesPerson:1,dateOfQuotation:-1});
+quotationSchema.index({status:1,createdAt:-1});
 const Quotation = mongoose.model("Quotation", quotationSchema);
 export default Quotation;

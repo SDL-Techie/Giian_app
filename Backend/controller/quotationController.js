@@ -3,8 +3,9 @@ import Customer from "../model/customerModel.js";
 import Product from "../model/productModel.js";
 import { getNextSequence } from "../model/counterModel.js";
 import { calculateLineItems, sumItems, computeGrandTotal } from "../utils/calculateTotals.js";
-import { validateLineItems, isValidObjectId } from "../utils/validators.js";
-import { generateDocumentPdf } from "../utils/pdfGenerator.js";
+import { validateLineItems, isValidObjectId, validateCommercialTotalsInput, isValidDateValue } from "../utils/validators.js";
+import { generateBrandedPdf } from "../utils/pdfGenerator.js";
+import { logger } from "../utils/logger.js";
 
 // @desc   New quotation
 // @route  POST /api/v1/quotations
@@ -15,13 +16,13 @@ export const createQuotation = async (req, res, next) => {
     if (!customerId || !isValidObjectId(customerId)) {
       return res.status(400).json({ success: false, message: "A valid customer is required" });
     }
-    if (!dateOfQuotation) {
-      return res.status(400).json({ success: false, message: "Date of quotation is required" });
+    if (!dateOfQuotation || !isValidDateValue(dateOfQuotation)) {
+      return res.status(400).json({ success: false, message: "A valid quotation date is required" });
     }
 
     const customer = await Customer.findById(customerId);
-    if (!customer) {
-      return res.status(404).json({ success: false, message: "Customer not found" });
+    if (!customer || customer.status !== "Active") {
+      return res.status(404).json({ success: false, message: "Active customer not found" });
     }
 
     const validationError = validateLineItems(items, "price");
@@ -30,13 +31,15 @@ export const createQuotation = async (req, res, next) => {
     }
 
     const productIds = items.map((i) => i.product);
-    const products = await Product.find({ _id: { $in: productIds } });
+    const products = await Product.find({ _id: { $in: productIds }, status: "Active" });
     if (products.length !== new Set(productIds).size) {
       return res.status(400).json({ success: false, message: "One or more products are invalid" });
     }
 
     const lineItems = calculateLineItems(items, "price");
     const subTotal = sumItems(lineItems, "totalPrice");
+    const totalsValidation = validateCommercialTotalsInput({ subTotal, discount: discount || 0, vatPercent: vatPercent || 0 });
+    if (totalsValidation) return res.status(400).json({ success: false, message: totalsValidation });
     const totals = computeGrandTotal({ subTotal, discount: discount || 0, vatPercent: vatPercent || 0 });
 
     const quotationNo = await getNextSequence("quotation", "QTN-");
@@ -57,40 +60,20 @@ export const createQuotation = async (req, res, next) => {
       createdBy: req.user._id,
     });
 
-    // Generate a PDF copy of the quotation.
+    // Dubai-only project: generate the GIIAN AED + VAT proposal.
     const productMap = new Map(products.map((p) => [String(p._id), p]));
-    const pdfPath = await generateDocumentPdf({
-      title: "QUOTATION",
-      docNumber: quotation.quotationNo,
-      fileNamePrefix: "quotation",
-      metaLines: [
-        { label: "Date", value: new Date(dateOfQuotation).toDateString() },
-        { label: "ATTN", value: quotation.attn },
-      ],
-      customer: {
-        companyName: customer.companyName,
-        contactPersonName: customer.contactPersonName,
-        companyAddress: customer.companyAddress,
-        mobileNumber: customer.mobileNumber,
-      },
-      items: lineItems.map((i) => ({
-        name: productMap.get(String(i.product))?.name || "Product",
-        qty: i.qty,
-        price: i.price,
-        total: i.totalPrice,
-      })),
-      summaryLines: [
-        { label: "Subtotal", value: totals.subTotal.toFixed(2) },
-        { label: "Discount", value: Number(discount || 0).toFixed(2) },
-        { label: `VAT (${vatPercent || 0}%)`, value: totals.vatAmount.toFixed(2) },
-        { label: "Total", value: totals.totalAmount.toFixed(2) },
-      ],
-    });
+    const pdfItems = lineItems.map((i) => ({ name: productMap.get(String(i.product))?.name || "Product", imageUrl: productMap.get(String(i.product))?.productImageUrl, qty: i.qty, price: i.price, total: i.totalPrice }));
+    let pdfWarning;
+    try {
+      quotation.pdfDubaiUrl = await generateBrandedPdf({ title:"QUOTATION", docNumber:quotation.quotationNo, fileNamePrefix:"quotation", region:"dubai", date:dateOfQuotation, attn:quotation.attn, customer, items:pdfItems, discount:discount||0, vatPercent:vatPercent||0, subTotal:totals.subTotal, vatAmount:totals.vatAmount, totalAmount:totals.totalAmount, currency:"AED" });
+      quotation.pdfUrl = quotation.pdfDubaiUrl;
+      await quotation.save();
+    } catch (pdfError) {
+      pdfWarning = "Quotation was created, but PDF generation failed.";
+      logger.error("Quotation PDF generation failed", { quotationId: String(quotation._id), error: pdfError.message });
+    }
 
-    quotation.pdfUrl = `/${pdfPath}`;
-    await quotation.save();
-
-    res.status(201).json({ success: true, message: "Quotation created successfully", data: quotation });
+    res.status(201).json({ success: true, message: "Quotation created successfully", data: quotation, ...(pdfWarning ? { warning: pdfWarning } : {}) });
   } catch (err) {
     next(err);
   }

@@ -2,61 +2,62 @@ import User from "../model/userModel.js";
 import Role from "../model/roleModel.js";
 import { sendToken } from "../helper/jwtToken.js";
 import { isValidEmail, isValidObjectId } from "../utils/validators.js";
+import { isStrongPassword, passwordPolicyMessage } from "../utils/passwordPolicy.js";
 
-// @desc   Register the very first admin, or (if called by an admin) create a staff user.
-// @route  POST /api/v1/auth/register
+// @desc   Public self-registration is intentionally disabled in production.
+export const publicRegistrationDisabled = async (_req, res) => {
+  return res.status(403).json({
+    success: false,
+    message: "Public registration is disabled. Users must be created by an administrator.",
+  });
+};
+
+// @desc   Create a staff user (admin-only via /api/v1/users)
 export const createUser = async (req, res, next) => {
   try {
     const { name, email, phoneno, password, roleId } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Name, email and password are required",
-      });
+      return res.status(400).json({ success: false, message: "Name, email and password are required" });
     }
-
     if (!isValidEmail(email)) {
       return res.status(400).json({ success: false, message: "Invalid email format" });
     }
-
-    if (password.length < 6) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Password must be at least 6 characters" });
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({ success: false, message: passwordPolicyMessage });
     }
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
-    if (existing) {
+    const normalizedEmail = email.toLowerCase().trim();
+    if (await User.exists({ email: normalizedEmail })) {
       return res.status(409).json({ success: false, message: "Email already registered" });
     }
 
-    // The very first user in the system automatically becomes the admin.
-    const userCount = await User.countDocuments();
-    const isFirstUser = userCount === 0;
-
-    if (roleId && !isValidObjectId(roleId)) {
-      return res.status(400).json({ success: false, message: "Invalid role id" });
-    }
-
+    let role = null;
     if (roleId) {
-      const role = await Role.findById(roleId);
-      if (!role) {
-        return res.status(404).json({ success: false, message: "Role not found" });
+      if (!isValidObjectId(roleId)) {
+        return res.status(400).json({ success: false, message: "Invalid role id" });
+      }
+      role = await Role.findById(roleId);
+      if (!role) return res.status(404).json({ success: false, message: "Role not found" });
+      if (role.status !== "Active") {
+        return res.status(400).json({ success: false, message: "Cannot assign an inactive role" });
       }
     }
 
     const user = await User.create({
-      name,
-      email: email.toLowerCase(),
+      name: name.trim(),
+      email: normalizedEmail,
       phoneno,
       password,
-      isAdmin: isFirstUser,
-      role: roleId || null,
-      createdBy: req.user ? req.user._id : undefined,
+      isAdmin: false,
+      role: role?._id || null,
+      status: "Active",
+      mustChangePassword: true,
+      createdBy: req.user._id,
     });
 
-    sendToken(user, 201, res);
+    const safeUser = await User.findById(user._id).populate("role");
+    res.status(201).json({ success: true, message: "User created successfully", data: safeUser });
   } catch (err) {
     next(err);
   }
@@ -85,6 +86,9 @@ export const loginUser = async (req, res, next) => {
     if (user.status === "Inactive") {
       return res.status(403).json({ success: false, message: "This account has been deactivated" });
     }
+    if (!user.isAdmin && user.role && user.role.status !== "Active") {
+      return res.status(403).json({ success: false, message: "Your assigned role is inactive" });
+    }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
@@ -103,7 +107,7 @@ export const logoutUser = async (req, res, next) => {
   try {
     res
       .status(200)
-      .cookie("token", null, { expires: new Date(Date.now()), httpOnly: true })
+      .cookie("token", "", { expires: new Date(0), httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === "production" ? "strict" : "lax"), path: "/" })
       .json({ success: true, message: "Logged out successfully" });
   } catch (err) {
     next(err);
@@ -159,10 +163,8 @@ export const changePassword = async (req, res, next) => {
         .status(400)
         .json({ success: false, message: "Current and new password are required" });
     }
-    if (newPassword.length < 6) {
-      return res
-        .status(400)
-        .json({ success: false, message: "New password must be at least 6 characters" });
+    if (!isStrongPassword(newPassword)) {
+      return res.status(400).json({ success: false, message: passwordPolicyMessage });
     }
 
     const user = await User.findById(req.user._id).select("+password");
@@ -172,6 +174,7 @@ export const changePassword = async (req, res, next) => {
     }
 
     user.password = newPassword;
+    user.mustChangePassword = false;
     await user.save();
 
     res.status(200).json({ success: true, message: "Password changed successfully" });
@@ -232,6 +235,11 @@ export const updateUserDetails = async (req, res, next) => {
       if (roleId && !isValidObjectId(roleId)) {
         return res.status(400).json({ success: false, message: "Invalid role id" });
       }
+      if (roleId) {
+        const role = await Role.findById(roleId);
+        if (!role) return res.status(404).json({ success: false, message: "Role not found" });
+        if (role.status !== "Active") return res.status(400).json({ success: false, message: "Cannot assign an inactive role" });
+      }
       updates.role = roleId || null;
     }
 
@@ -258,10 +266,8 @@ export const resetUserPassword = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Invalid user id" });
     }
     const { newPassword } = req.body;
-    if (!newPassword || newPassword.length < 6) {
-      return res
-        .status(400)
-        .json({ success: false, message: "New password must be at least 6 characters" });
+    if (!isStrongPassword(newPassword)) {
+      return res.status(400).json({ success: false, message: passwordPolicyMessage });
     }
 
     const user = await User.findById(req.params.id);
@@ -270,6 +276,7 @@ export const resetUserPassword = async (req, res, next) => {
     }
 
     user.password = newPassword;
+    user.mustChangePassword = true;
     await user.save();
 
     res.status(200).json({ success: true, message: "Password reset successfully" });

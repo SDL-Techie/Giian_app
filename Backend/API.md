@@ -15,9 +15,9 @@ Role whose `permissions.<module>.<action>` is `true`.
 
 | Method | Endpoint | Auth | Body | Notes |
 |---|---|---|---|---|
-| POST | `/auth/register` | Public | `{ name, email, phoneno?, password, roleId? }` | First-ever user becomes admin |
+| POST | `/auth/register` | Public | — | Disabled (403). Initial admin is bootstrapped; admins create staff via `/users`. |
 | POST | `/auth/login` | Public | `{ email, password }` | Returns JWT + user |
-| GET | `/auth/logout` | Token | — | Clears the cookie |
+| POST | `/auth/logout` | Token | — | Clears the cookie |
 | GET | `/auth/me` | Token | — | Current user's profile |
 | PUT | `/auth/me` | Token | `{ name?, phoneno?, email? }` | Update own profile |
 | PUT | `/auth/change-password` | Token | `{ currentPassword, newPassword }` | |
@@ -48,9 +48,10 @@ Role whose `permissions.<module>.<action>` is `true`.
 | Method | Endpoint | Permission | Body |
 |---|---|---|---|
 | GET | `/customers?search=&status=` | view | — |
-| POST | `/customers` (multipart, field `companyDocument`) | create | `{ companyName, telephoneNumber?, email?, mobileNumber?, contactPersonName?, companyAddress?, creditLimit? }` |
+| POST | `/customers` (multipart, field `companyDocuments`, up to 10 files) | create | `{ companyName, telephoneNumber?, email?, mobileNumber?, contactPersonName?, companyAddress?, creditLimit? }` |
 | GET | `/customers/:id` | view | — |
 | PUT | `/customers/:id` (multipart) | modify | same fields |
+| PUT | `/customers/:id/status` | modify | `{ status: 'Active'|'Inactive' }` |
 | DELETE | `/customers/:id` | modify | soft-deactivates |
 | GET | `/customers/reports/quotations?customerId=&from=&to=` | view | Customer-wise quotation report |
 | GET | `/customers/reports/sales?customerId=&from=&to=` | view | Customer-wise sales report |
@@ -59,9 +60,9 @@ Role whose `permissions.<module>.<action>` is `true`.
 
 | Method | Endpoint | Permission | Body |
 |---|---|---|---|
-| GET | `/categories?parentCategory=root|<id>` | view | list / sub-category listing |
-| POST | `/categories` | create | `{ name, parentCategory? }` |
-| PUT | `/categories/:id` | modify | `{ name?, parentCategory?, status? }` |
+| GET | `/categories` | view | top-level category list |
+| POST | `/categories` | create | `{ name }` |
+| PUT | `/categories/:id` | modify | `{ name?, status? }` |
 | DELETE | `/categories/:id` | modify | — |
 
 ## Products (`/products`) — Permission: `products.*`
@@ -72,6 +73,7 @@ Role whose `permissions.<module>.<action>` is `true`.
 | POST | `/products` (multipart, field `productImage`) | create | `{ name, itemCode, unitOfMeasure?, category }` |
 | GET | `/products/:id` | view | — |
 | PUT | `/products/:id` (multipart) | modify | same fields |
+| PUT | `/products/:id/status` | modify | `{ status: 'Active'|'Inactive' }` |
 | DELETE | `/products/:id` | modify | soft-deactivates |
 | GET | `/products/reports/list` | report | full product list report |
 
@@ -144,3 +146,11 @@ Role whose `permissions.<module>.<action>` is `true`.
 | 404 | Resource not found |
 | 409 | Conflict (duplicate email / role name / item code) |
 | 500 | Unexpected server error (logged server-side, never leaks a stack trace) |
+
+## Production additions
+
+### Audit logs (`/audit-logs`) — Admin only
+
+| Method | Endpoint | Notes |
+|---|---|---|
+| GET | `/audit-logs?page=1&limit=50&method=&actor=&from=&to=` | Successful mutation audit history |

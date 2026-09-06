@@ -1,125 +1,79 @@
 import Product from "../model/productModel.js";
+import Category from "../model/categoryModel.js";
 import { isValidObjectId } from "../utils/validators.js";
+import { uploadImageToCloudinary } from "../utils/cloudinary.js";
 
-// @desc   Create product
-// @route  POST /api/v1/products
+const imageUrl = async (file) => file ? (await uploadImageToCloudinary(file)).secure_url : undefined;
+
+const validateCategory = async (categoryId) => {
+  if (!categoryId || !isValidObjectId(categoryId)) throw Object.assign(new Error("Invalid category id"), { statusCode: 400 });
+  const category = await Category.findById(categoryId);
+  if (!category || category.status !== "Active") throw Object.assign(new Error("Active category is required"), { statusCode: 400 });
+};
+
 export const createProduct = async (req, res, next) => {
   try {
     const { name, itemCode, unitOfMeasure, category } = req.body;
-
-    if (!name || !itemCode || !category) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Name, item code and category are required" });
-    }
-    if (!isValidObjectId(category)) {
-      return res.status(400).json({ success: false, message: "Invalid category id" });
-    }
-
+    if (!name || !itemCode || !category) return res.status(400).json({ success: false, message: "Name, item code and category are required" });
+    await validateCategory(category);
     const product = await Product.create({
-      name,
-      itemCode,
-      unitOfMeasure,
-      category,
-      productImageUrl: req.file ? `/uploads/${req.file.filename}` : undefined,
-      createdBy: req.user._id,
+      name: name.trim(), itemCode: itemCode.trim(), unitOfMeasure, category,
+      productImageUrl: await imageUrl(req.file), createdBy: req.user._id,
     });
-
     res.status(201).json({ success: true, message: "Product created successfully", data: product });
-  } catch (err) {
-    next(err);
-  }
+  } catch (e) { next(e); }
 };
 
-// @desc   List products
-// @route  GET /api/v1/products
 export const getAllProducts = async (req, res, next) => {
   try {
     const { search, category, status } = req.query;
-    const filter = {};
-    if (status) filter.status = status;
-    if (category) filter.category = category;
-    if (search) filter.$text = { $search: search };
-
-    const products = await Product.find(filter)
-      .populate("category", "name")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({ success: true, message: "Products fetched", data: products });
-  } catch (err) {
-    next(err);
-  }
+    const f = {};
+    if (search) f.$text = { $search: search };
+    if (category) f.category = category;
+    if (status) f.status = status;
+    const data = await Product.find(f).populate("category", "name").sort({ createdAt: -1 });
+    res.json({ success: true, message: "Products fetched", data });
+  } catch (e) { next(e); }
 };
 
-// @desc   Get single product
-// @route  GET /api/v1/products/:id
 export const getProductById = async (req, res, next) => {
   try {
-    if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid product id" });
-    }
-    const product = await Product.findById(req.params.id).populate("category", "name");
-    if (!product) {
-      return res.status(404).json({ success: false, message: "Product not found" });
-    }
-    res.status(200).json({ success: true, message: "Product fetched", data: product });
-  } catch (err) {
-    next(err);
-  }
+    if (!isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid product id" });
+    const data = await Product.findById(req.params.id).populate("category", "name");
+    if (!data) return res.status(404).json({ success: false, message: "Product not found" });
+    res.json({ success: true, message: "Product fetched", data });
+  } catch (e) { next(e); }
 };
 
-// @desc   Modify product
-// @route  PUT /api/v1/products/:id
 export const updateProduct = async (req, res, next) => {
   try {
-    if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid product id" });
-    }
-    const updates = { ...req.body };
-    if (req.file) {
-      updates.productImageUrl = `/uploads/${req.file.filename}`;
-    }
-    const product = await Product.findByIdAndUpdate(req.params.id, updates, {
-      new: true,
-      runValidators: true,
-    });
-    if (!product) {
-      return res.status(404).json({ success: false, message: "Product not found" });
-    }
-    res.status(200).json({ success: true, message: "Product updated successfully", data: product });
-  } catch (err) {
-    next(err);
-  }
+    if (!isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid product id" });
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    const category = req.body.category ?? product.category;
+    await validateCategory(category);
+    const allowed = ["name", "itemCode", "unitOfMeasure", "category", "status"];
+    for (const key of allowed) if (req.body[key] !== undefined) product[key] = req.body[key];
+    if (req.file) product.productImageUrl = await imageUrl(req.file);
+    await product.save();
+    res.json({ success: true, message: "Product updated successfully", data: product });
+  } catch (e) { next(e); }
 };
 
-// @desc   Deactivate product
-// @route  DELETE /api/v1/products/:id
-export const deleteProduct = async (req, res, next) => {
+export const setProductStatus = async (req, res, next) => {
   try {
-    if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid product id" });
-    }
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      { status: "Inactive" },
-      { new: true }
-    );
-    if (!product) {
-      return res.status(404).json({ success: false, message: "Product not found" });
-    }
-    res.status(200).json({ success: true, message: "Product deactivated successfully" });
-  } catch (err) {
-    next(err);
-  }
+    if (!isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid product id" });
+    if (!["Active", "Inactive"].includes(req.body.status)) return res.status(400).json({ success: false, message: "status must be Active or Inactive" });
+    const data = await Product.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+    if (!data) return res.status(404).json({ success: false, message: "Product not found" });
+    res.json({ success: true, message: `Product ${req.body.status === "Active" ? "activated" : "deactivated"} successfully`, data });
+  } catch (e) { next(e); }
 };
 
-// @desc   Product report (list report referenced in PDF "Products" module)
-// @route  GET /api/v1/products/reports/list
-export const productListReport = async (req, res, next) => {
+export const deleteProduct = async (req, res, next) => { req.body.status = "Inactive"; return setProductStatus(req, res, next); };
+export const productListReport = async (_req, res, next) => {
   try {
-    const products = await Product.find().populate("category", "name").sort({ name: 1 });
-    res.status(200).json({ success: true, message: "Report generated", data: products });
-  } catch (err) {
-    next(err);
-  }
+    const data = await Product.find().populate("category", "name").sort({ name: 1 });
+    res.json({ success: true, message: "Report generated", data });
+  } catch (e) { next(e); }
 };

@@ -82,13 +82,11 @@ db connected in your <host>
 
 ## Authentication
 
-- The **first** user ever registered (`POST /api/v1/auth/register`)
-  automatically becomes the super admin (`isAdmin: true`).
-- All subsequent staff accounts should be created by an admin via
-  `POST /api/v1/users` and assigned a **Role** (see User Management below).
-- Login returns a JWT both as a JSON field (`token`) and as an httpOnly
-  cookie. Send it back either as `Authorization: Bearer <token>` or let the
-  cookie ride automatically.
+- Public self-registration (`POST /api/v1/auth/register`) is disabled.
+- The initial super admin is bootstrapped from `BOOTSTRAP_ADMIN_*` environment variables.
+- Staff accounts are created by an authenticated admin via `POST /api/v1/users` and assigned a Role.
+- Bootstrap/admin-reset passwords require a password change before other protected APIs can be used.
+- Login returns a JWT both as JSON (`token`) and as an httpOnly cookie.
 
 ## User Management & Roles (Admin only)
 
@@ -132,13 +130,11 @@ required permission, request body, response shape).
 
 ## File Uploads & Generated PDFs
 
-Uploaded documents/images and generated Quotation/Invoice/Receipt PDFs are
-written to `/uploads` and served statically at `/uploads/<filename>`. In
-production, point this at persistent/object storage instead of local disk.
+Customer and purchase documents are stored in MongoDB GridFS behind authenticated `/api/v1/files/:id` access. PDF uploads are optimized before storage using Ghostscript; other supported documents use gzip. Product images use Cloudinary. Generated Quotation/Invoice/Receipt PDFs remain protected by authenticated backend routes. Configure persistent storage and Ghostscript in production as described in `PRODUCTION_NOTES.md`.
 
 ## Testing
 
-1. **Auth**: register the first user (becomes admin), login, call
+1. **Auth**: configure the bootstrap admin, start the server, login, call
    `GET /api/v1/auth/me` with the token, then try it with no token /
    an invalid token to confirm you get `401`.
 2. **RBAC**: create a Role with limited permissions, create a user with

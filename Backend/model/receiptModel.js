@@ -82,5 +82,8 @@ const receiptSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+
+receiptSchema.index({customer:1,createdAt:-1});
+receiptSchema.index({customer:1,type:1,status:1,remainingAdvance:1});
 const Receipt = mongoose.model("Receipt", receiptSchema);
 export default Receipt;

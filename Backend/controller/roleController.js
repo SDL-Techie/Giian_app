@@ -74,7 +74,12 @@ export const updateRole = async (req, res, next) => {
     const { name, permissions, status } = req.body;
     if (name) role.name = name;
     if (permissions) role.permissions = { ...role.permissions.toObject(), ...permissions };
-    if (status) role.status = status;
+    if (status) {
+      if (!["Active", "Inactive"].includes(status)) {
+        return res.status(400).json({ success: false, message: "Status must be Active or Inactive" });
+      }
+      role.status = status;
+    }
 
     await role.save();
 
@@ -98,8 +103,9 @@ export const deleteRole = async (req, res, next) => {
     if (role.isSystem) {
       return res.status(403).json({ success: false, message: "System roles cannot be deleted" });
     }
-    await role.deleteOne();
-    res.status(200).json({ success: true, message: "Role deleted successfully" });
+    role.status = "Inactive";
+    await role.save();
+    res.status(200).json({ success: true, message: "Role deactivated successfully", data: role });
   } catch (err) {
     next(err);
   }

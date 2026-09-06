@@ -106,9 +106,8 @@ const invoiceSchema = new mongoose.Schema(
     cancelledReason: {
       type: String,
     },
-    pdfUrl: {
-      type: String,
-    },
+    pdfUrl: { type: String },
+    pdfDubaiUrl: { type: String },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -118,5 +117,10 @@ const invoiceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+
+invoiceSchema.index({customer:1,invoiceDate:-1,status:1});
+invoiceSchema.index({salesPerson:1,invoiceDate:-1,status:1});
+invoiceSchema.index({paymentStatus:1,balanceAmount:1});
+invoiceSchema.index({quotation:1},{unique:true,partialFilterExpression:{quotation:{$type:"objectId"}}});
 const Invoice = mongoose.model("Invoice", invoiceSchema);
 export default Invoice;
