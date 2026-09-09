@@ -10,6 +10,12 @@
   white-space: nowrap;
 }
 
+.badge-primary {
+  background: rgba(167, 134, 87, 0.12);
+  color: #8b6d43;
+  border: 1px solid rgba(167, 134, 87, 0.22);
+}
+
 .badge-dot {
   width: 6px;
   height: 6px;

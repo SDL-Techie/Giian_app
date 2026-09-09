@@ -11,7 +11,7 @@ import { logger } from "../utils/logger.js";
 // @route  POST /api/v1/quotations
 export const createQuotation = async (req, res, next) => {
   try {
-    const { customer: customerId, dateOfQuotation, attn, items, discount, vatPercent } = req.body;
+    const { customer: customerId, dateOfQuotation, attn, warrantyTerms, items, discount, vatPercent } = req.body;
 
     if (!customerId || !isValidObjectId(customerId)) {
       return res.status(400).json({ success: false, message: "A valid customer is required" });
@@ -50,6 +50,7 @@ export const createQuotation = async (req, res, next) => {
       dateOfQuotation,
       // ATTN defaults to the customer's contact person name unless the user overrides it.
       attn: attn || customer.contactPersonName,
+      warrantyTerms: String(warrantyTerms || "").trim(),
       items: lineItems,
       discount: discount || 0,
       subTotal: totals.subTotal,
@@ -65,7 +66,7 @@ export const createQuotation = async (req, res, next) => {
     const pdfItems = lineItems.map((i) => ({ name: productMap.get(String(i.product))?.name || "Product", imageUrl: productMap.get(String(i.product))?.productImageUrl, qty: i.qty, price: i.price, total: i.totalPrice }));
     let pdfWarning;
     try {
-      quotation.pdfDubaiUrl = await generateBrandedPdf({ title:"QUOTATION", docNumber:quotation.quotationNo, fileNamePrefix:"quotation", region:"dubai", date:dateOfQuotation, attn:quotation.attn, customer, items:pdfItems, discount:discount||0, vatPercent:vatPercent||0, subTotal:totals.subTotal, vatAmount:totals.vatAmount, totalAmount:totals.totalAmount, currency:"AED" });
+      quotation.pdfDubaiUrl = await generateBrandedPdf({ title:"QUOTATION", docNumber:quotation.quotationNo, fileNamePrefix:"quotation", region:"dubai", date:dateOfQuotation, attn:quotation.attn, customer, items:pdfItems, discount:discount||0, vatPercent:vatPercent||0, subTotal:totals.subTotal, vatAmount:totals.vatAmount, totalAmount:totals.totalAmount, currency:"AED", warrantyTerms: quotation.warrantyTerms });
       quotation.pdfUrl = quotation.pdfDubaiUrl;
       await quotation.save();
     } catch (pdfError) {
@@ -101,6 +102,24 @@ export const getAllQuotations = async (req, res, next) => {
 
 // @desc   Get single quotation
 // @route  GET /api/v1/quotations/:id
+// export const getQuotationById = async (req, res, next) => {
+//   try {
+//     if (!isValidObjectId(req.params.id)) {
+//       return res.status(400).json({ success: false, message: "Invalid quotation id" });
+//     }
+//     const quotation = await Quotation.findById(req.params.id)
+//       .populate("customer")
+//       .populate("salesPerson", "name")
+//       .populate("items.product", "name itemCode");
+//     if (!quotation) {
+//       return res.status(404).json({ success: false, message: "Quotation not found" });
+//     }
+//     res.status(200).json({ success: true, message: "Quotation fetched", data: quotation });
+//   } catch (err) {
+//     next(err);
+//   }
+// };
+
 export const getQuotationById = async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
@@ -109,6 +128,7 @@ export const getQuotationById = async (req, res, next) => {
     const quotation = await Quotation.findById(req.params.id)
       .populate("customer")
       .populate("salesPerson", "name")
+      .populate("approvedBy", "name")
       .populate("items.product", "name itemCode");
     if (!quotation) {
       return res.status(404).json({ success: false, message: "Quotation not found" });
@@ -189,5 +209,102 @@ export const salesmanWiseQuotationReport = async (req, res, next) => {
     res.status(200).json({ success: true, message: "Report generated", data: quotations });
   } catch (err) {
     next(err);
+  }
+};
+
+
+// export const generateQuotationPdf = async (req, res, next) => {
+//   try {
+//     const pageSize = String(req.query.size || "A4").toUpperCase() === "A5" ? "A5" : "A4";
+//     if (!isValidObjectId(req.params.id)) return res.status(400).json({ success:false, message:"Invalid quotation id" });
+//     const quotation = await Quotation.findById(req.params.id).populate("customer").populate("items.product", "name itemCode productImageUrl");
+//     if (!quotation) return res.status(404).json({ success:false, message:"Quotation not found" });
+//     const items = quotation.items.map(i => ({ name:i.product?.name || "Product", imageUrl:i.product?.productImageUrl, qty:i.qty, price:i.price, total:i.totalPrice }));
+//     const url = await generateBrandedPdf({ title:"QUOTATION", docNumber:quotation.quotationNo, fileNamePrefix:"quotation", region:"dubai", pageSize, date:quotation.dateOfQuotation, attn:quotation.attn, customer:quotation.customer, items, discount:quotation.discount||0, vatPercent:quotation.vatPercent||0, subTotal:quotation.subTotal, vatAmount:quotation.vatAmount, totalAmount:quotation.totalAmount, currency:"AED", warrantyTerms:quotation.warrantyTerms || "" });
+//     return res.json({ success:true, message:`${pageSize} quotation generated`, data:{url,pageSize} });
+//   } catch (e) { next(e); }
+// };
+
+
+export const generateQuotationPdf = async (req, res, next) => {
+  try {
+    const pageSize = String(req.query.size || "A4").toUpperCase() === "A5" ? "A5" : "A4";
+    if (!isValidObjectId(req.params.id)) return res.status(400).json({ success:false, message:"Invalid quotation id" });
+    const quotation = await Quotation.findById(req.params.id)
+      .populate("customer")
+      .populate("approvedBy", "name")
+      .populate("items.product", "name itemCode productImageUrl");
+    if (!quotation) return res.status(404).json({ success:false, message:"Quotation not found" });
+    const items = quotation.items.map(i => ({ name:i.product?.name || "Product", imageUrl:i.product?.productImageUrl, qty:i.qty, price:i.price, total:i.totalPrice }));
+    const url = await generateBrandedPdf({
+      title:"QUOTATION", docNumber:quotation.quotationNo, fileNamePrefix:"quotation", region:"dubai", pageSize,
+      date:quotation.dateOfQuotation, attn:quotation.attn, customer:quotation.customer, items,
+      discount:quotation.discount||0, vatPercent:quotation.vatPercent||0, subTotal:quotation.subTotal,
+      vatAmount:quotation.vatAmount, totalAmount:quotation.totalAmount, currency:"AED",
+      warrantyTerms:quotation.warrantyTerms || "",
+      approved: quotation.approvalStatus === "Approved",
+      approvedBy: quotation.approvedBy?.name || "",
+      approvedAt: quotation.approvedAt,
+    });
+    return res.json({ success:true, message:`${pageSize} quotation generated`, data:{url,pageSize} });
+  } catch (e) { next(e); }
+};
+
+
+export const approveQuotation = async (req, res, next) => {
+  try {
+    if (!isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid quotation id" });
+    const quotation = await Quotation.findById(req.params.id);
+    if (!quotation) return res.status(404).json({ success: false, message: "Quotation not found" });
+    // if (quotation.status !== "Open") return res.status(400).json({ success: false, message: "Only open quotations can be approved" });
+    // if (quotation.approvalStatus === "Approved") return res.status(400).json({ success: false, message: "Quotation is already approved" });
+
+    quotation.approvalStatus = "Approved";
+    quotation.approvedBy = req.user._id;
+    quotation.approvedAt = new Date();
+    await quotation.save();
+
+    const populated = await Quotation.findById(quotation._id)
+      .populate("customer")
+      .populate("approvedBy", "name")
+      .populate("items.product", "name itemCode productImageUrl");
+
+    const items = populated.items.map((i) => ({
+      name: i.product?.name || "Product",
+      imageUrl: i.product?.productImageUrl,
+      qty: i.qty,
+      price: i.price,
+      total: i.totalPrice,
+    }));
+
+    const url = await generateBrandedPdf({
+      title: "QUOTATION",
+      docNumber: populated.quotationNo,
+      fileNamePrefix: "quotation",
+      region: "dubai",
+      pageSize: "A4",
+      date: populated.dateOfQuotation,
+      attn: populated.attn,
+      customer: populated.customer,
+      items,
+      discount: populated.discount || 0,
+      vatPercent: populated.vatPercent || 0,
+      subTotal: populated.subTotal,
+      vatAmount: populated.vatAmount,
+      totalAmount: populated.totalAmount,
+      currency: "AED",
+      warrantyTerms: populated.warrantyTerms || "",
+      approved: true,
+      approvedBy: populated.approvedBy?.name || req.user.name,
+      approvedAt: populated.approvedAt,
+    });
+
+    populated.pdfDubaiUrl = url;
+    populated.pdfUrl = url;
+    await populated.save();
+
+    return res.json({ success: true, message: "Quotation approved successfully", data: populated });
+  } catch (e) {
+    next(e);
   }
 };

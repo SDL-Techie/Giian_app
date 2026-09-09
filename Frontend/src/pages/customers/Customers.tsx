@@ -57,7 +57,7 @@
 //   const [mobileNumber, setMobileNumber] = useState('');
 //   const [contactPersonName, setContactPersonName] = useState('');
 //   const [companyAddress, setCompanyAddress] = useState('');
-//   const [creditLimit, setCreditLimit] = useState<number>(0);
+//   const [creditLimit, setCreditLimit] = useState<number | ''>('');
 //   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
 //   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -93,7 +93,7 @@
 //     setMobileNumber('');
 //     setContactPersonName('');
 //     setCompanyAddress('');
-//     setCreditLimit(0);
+//     setCreditLimit('');
 //     setDocumentFiles([]);
 //     setFormErrors({});
 //     setIsFormOpen(true);
@@ -107,7 +107,7 @@
 //     setMobileNumber(c.mobileNumber || '');
 //     setContactPersonName(c.contactPersonName || '');
 //     setCompanyAddress(c.companyAddress || '');
-//     setCreditLimit(c.creditLimit || 0);
+//     setCreditLimit(c.creditLimit > 0 ? c.creditLimit : '');
 //     setDocumentFiles([]);
 //     setFormErrors({});
 //     setIsFormOpen(true);
@@ -121,7 +121,7 @@
 //     if (email && !/^\S+@\S+\.\S+$/.test(email)) {
 //       errs.email = 'Please enter a valid email';
 //     }
-//     if (creditLimit < 0) {
+//     if (Number(creditLimit || 0) < 0) {
 //       errs.creditLimit = 'Credit limit cannot be negative';
 //     }
 //     setFormErrors(errs);
@@ -141,7 +141,7 @@
 //         mobileNumber: mobileNumber || undefined,
 //         contactPersonName: contactPersonName || undefined,
 //         companyAddress: companyAddress || undefined,
-//         creditLimit: Number(creditLimit),
+//         creditLimit: Number(creditLimit || 0),
 //         companyDocuments: documentFiles.length ? documentFiles : undefined,
 //       };
 
@@ -568,7 +568,7 @@
 //               label="Credit Limit (AED)"
 //               placeholder="0"
 //               value={creditLimit}
-//               onChange={(e) => setCreditLimit(Number(e.target.value))}
+//               onChange={(e) => setCreditLimit(e.target.value === '' ? '' : Number(e.target.value))}
 //               error={formErrors.creditLimit}
 //               min="0"
 //               step="any"
@@ -678,7 +678,7 @@ export const Customers: React.FC = () => {
   const [mobileNumber, setMobileNumber] = useState('');
   const [contactPersonName, setContactPersonName] = useState('');
   const [companyAddress, setCompanyAddress] = useState('');
-  const [creditLimit, setCreditLimit] = useState<number>(0);
+  const [creditLimit, setCreditLimit] = useState<number | ''>('');
   // const [documentFiles, setDocumentFiles] = useState<File[]>([]);
   const [documentFiles, setDocumentFiles] = useState<(File | null)[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -718,7 +718,7 @@ export const Customers: React.FC = () => {
     setMobileNumber('');
     setContactPersonName('');
     setCompanyAddress('');
-    setCreditLimit(0);
+    setCreditLimit('');
     setDocumentFiles([]);
     setFormErrors({});
     setIsFormOpen(true);
@@ -732,7 +732,7 @@ export const Customers: React.FC = () => {
     setMobileNumber(c.mobileNumber || '');
     setContactPersonName(c.contactPersonName || '');
     setCompanyAddress(c.companyAddress || '');
-    setCreditLimit(c.creditLimit || 0);
+    setCreditLimit(c.creditLimit > 0 ? c.creditLimit : '');
     setDocumentFiles([]);
     setFormErrors({});
     setIsFormOpen(true);
@@ -758,7 +758,7 @@ export const Customers: React.FC = () => {
     if (email && !/^\S+@\S+\.\S+$/.test(email)) {
       errs.email = 'Please enter a valid email';
     }
-    if (creditLimit < 0) {
+    if (Number(creditLimit || 0) < 0) {
       errs.creditLimit = 'Credit limit cannot be negative';
     }
     setFormErrors(errs);
@@ -778,7 +778,7 @@ export const Customers: React.FC = () => {
         mobileNumber: mobileNumber || undefined,
         contactPersonName: contactPersonName || undefined,
         companyAddress: companyAddress || undefined,
-        creditLimit: Number(creditLimit),
+        creditLimit: Number(creditLimit || 0),
         // companyDocuments: documentFiles.length ? documentFiles : undefined,
         companyDocuments: documentFiles.filter(
   (file): file is File => file !== null
@@ -1215,7 +1215,7 @@ export const Customers: React.FC = () => {
               label="Credit Limit (AED)"
               placeholder="0"
               value={creditLimit}
-              onChange={(e) => setCreditLimit(Number(e.target.value))}
+              onChange={(e) => setCreditLimit(e.target.value === '' ? '' : Number(e.target.value))}
               error={formErrors.creditLimit}
               min="0"
               step="any"

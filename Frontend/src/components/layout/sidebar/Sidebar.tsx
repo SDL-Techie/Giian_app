@@ -169,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <div className="nav-section-title">Legal & Support</div>
           <NavLink to="/terms" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={onClose}><ScrollText size={18} className="nav-link-icon"/><span>Terms & Conditions</span></NavLink>
           <NavLink to="/privacy" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={onClose}><Shield size={18} className="nav-link-icon"/><span>Privacy Policy</span></NavLink>
-          {!isAdmin && <NavLink to="/delete-account" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={onClose}><UserRoundX size={18} className="nav-link-icon"/><span>Delete Account</span></NavLink>}
+          {/* {!isAdmin && <NavLink to="/delete-account" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={onClose}><UserRoundX size={18} className="nav-link-icon"/><span>Delete Account</span></NavLink>} */}
 
           <NavLink
             to="/profile"

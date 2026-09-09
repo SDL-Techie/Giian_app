@@ -66,3 +66,10 @@ This backend has been hardened for the supplied sales/CRM workflow.
 - Ghostscript compression has a configurable hard timeout (`PDF_COMPRESSION_TIMEOUT_MS`, default 45000 ms). Also configure CPU/RAM limits at the Docker/hosting layer because portable Node.js code cannot enforce reliable per-process OS resource quotas.
 - Run `npm audit --omit=dev` in CI/CD with network access and review relevant findings before each deployment.
 - Excel imports are atomic MongoDB transactions: if any row fails validation/write, the whole import is rolled back. This requires a replica set/Atlas in production, consistent with the financial transaction requirement.
+
+
+## Receipt PDFs and data transfer
+- Receipts use a dedicated landscape customer-facing design and the web UI offers direct Preview / Download only (no A4/A5 selector).
+- Configure COMPANY_NAME / COMPANY_ADDRESS / COMPANY_EMAIL / COMPANY_PHONE / COMPANY_WEBSITE for the receipt header.
+- Excel exports populate business references with readable text such as customer/company name, category name, sales person, role name, invoice number and product item code/name instead of raw MongoDB ObjectIds where practical. Imports accept those readable reference values.
+- Production financial imports and payment operations require MongoDB Atlas or a replica set. Development standalone MongoDB may use the explicitly enabled fallback only outside production.

@@ -1,4 +1,4 @@
-import api from './api';
+import api, { resolveApiFileUrl } from './api';
 import { ApiResponse } from '../types/api.types';
 import {
   Receipt,
@@ -14,12 +14,12 @@ export const receiptService = {
     if (customerId) params.customerId = customerId;
     if (type) params.type = type;
     const res = await api.get<ApiResponse<Receipt[]>>('/receipts', { params });
-    return res.data.data || [];
+    return (res.data.data || []).map((r:any) => ({ ...r, pdfUrl: resolveApiFileUrl(r.pdfUrl) }));
   },
 
   getReceiptById: async (id: string): Promise<Receipt> => {
     const res = await api.get<ApiResponse<Receipt>>(`/receipts/${id}`);
-    return res.data.data!;
+    const r:any = res.data.data!; return { ...r, pdfUrl: resolveApiFileUrl(r.pdfUrl) };
   },
 
   getPendingInvoices: async (customerId: string): Promise<Invoice[]> => {
@@ -29,12 +29,12 @@ export const receiptService = {
 
   createAdvanceReceipt: async (payload: CreateAdvanceReceiptPayload): Promise<Receipt> => {
     const res = await api.post<ApiResponse<Receipt>>('/receipts/advance', payload);
-    return res.data.data!;
+    const r:any = res.data.data!; return { ...r, pdfUrl: resolveApiFileUrl(r.pdfUrl) };
   },
 
   createCollectionReceipt: async (payload: CreateCollectionReceiptPayload): Promise<Receipt> => {
     const res = await api.post<ApiResponse<Receipt>>('/receipts/collection', payload);
-    return res.data.data!;
+    const r:any = res.data.data!; return { ...r, pdfUrl: resolveApiFileUrl(r.pdfUrl) };
   },
 
   getAdvanceBalance: async (customerId: string): Promise<{ advanceReceipts: Receipt[]; totalAdvance: number }> => {
@@ -46,7 +46,7 @@ export const receiptService = {
 
   createAdvanceAdjustment: async (payload: CreateAdvanceAdjustmentPayload): Promise<Receipt> => {
     const res = await api.post<ApiResponse<Receipt>>('/receipts/advance-adjustment', payload);
-    return res.data.data!;
+    const r:any = res.data.data!; return { ...r, pdfUrl: resolveApiFileUrl(r.pdfUrl) };
   },
 
 

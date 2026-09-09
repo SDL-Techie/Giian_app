@@ -16,3 +16,5 @@ router.route("/").get(getAllRoles).post(createRole);
 router.route("/:id").get(getRoleById).put(updateRole).delete(deleteRole);
 
 export default router;
+
+

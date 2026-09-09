@@ -40,6 +40,7 @@ export const Products: React.FC = () => {
   const [isReportLoading, setIsReportLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -332,7 +333,7 @@ export const Products: React.FC = () => {
                 header: 'Image',
                 accessor: (p) =>
                   p.productImageUrl ? (
-                    <img src={p.productImageUrl} alt={p.name} className="product-img-thumb" />
+                    <button type="button" className="product-image-thumb-button" onClick={() => setPreviewImage({ url: p.productImageUrl!, name: p.name })} title={`View ${p.name} image`}><img src={p.productImageUrl} alt={p.name} className="product-img-thumb" /></button>
                   ) : (
                     <div className="product-img-thumb" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-muted)', color: 'var(--text-muted)' }}>
                       <ImageIcon size={16} />
@@ -558,6 +559,10 @@ export const Products: React.FC = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)} title={previewImage?.name || 'Product Image'} size="lg">
+        {previewImage && <div className="professional-image-viewer"><div className="professional-image-stage"><img src={previewImage.url} alt={previewImage.name} /></div><div className="professional-image-meta"><strong>{previewImage.name}</strong><span>Product image preview</span></div></div>}
       </Modal>
 
       {/* Deactivate Product Dialog */}

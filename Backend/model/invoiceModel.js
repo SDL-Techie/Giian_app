@@ -45,6 +45,12 @@ const invoiceSchema = new mongoose.Schema(
       type: String, // optional
       trim: true,
     },
+    paymentTerms: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [2000, "Payment terms are too long"],
+    },
     // Present only when the invoice was generated from an existing quotation.
     quotation: {
       type: mongoose.Schema.Types.ObjectId,
@@ -108,6 +114,13 @@ const invoiceSchema = new mongoose.Schema(
     },
     pdfUrl: { type: String },
     pdfDubaiUrl: { type: String },
+    approvalStatus: {
+      type: String,
+      enum: ["Pending", "Approved"],
+      default: "Pending",
+    },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    approvedAt: { type: Date, default: null },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

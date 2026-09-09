@@ -79,7 +79,7 @@ export const setCustomerStatus = async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid customer id" });
     if (!["Active", "Inactive"].includes(req.body.status)) return res.status(400).json({ success: false, message: "status must be Active or Inactive" });
-    const data = await Customer.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+    const data = await Customer.findByIdAndUpdate(req.params.id, { status: req.body.status }, { returnDocument: 'after' });
     if (!data) return res.status(404).json({ success: false, message: "Customer not found" });
     res.json({ success: true, message: `Customer ${req.body.status === "Active" ? "activated" : "deactivated"} successfully`, data });
   } catch (e) { next(e); }

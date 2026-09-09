@@ -11,8 +11,9 @@ import {
   productWiseSalesReport,
   getOpenQuotationsForInvoice,
   generateInvoicePdf,
+  approveInvoice,
 } from "../controller/invoiceController.js";
-import { verifyUser, authorize } from "../helper/userAuth.js";
+import { verifyUser, authorize, isAdmin } from "../helper/userAuth.js";
 
 const router = express.Router();
 
@@ -36,6 +37,7 @@ router.post(
   createInvoiceFromQuotation
 );
 router.get("/:id/pdf", authorize("sales", "view"), generateInvoicePdf);
+router.put("/:id/approve", isAdmin, approveInvoice);
 router.get("/:id", authorize("sales", "view"), getInvoiceById);
 router.put("/:id/cancel", authorize("sales", "modify"), cancelInvoice);
 

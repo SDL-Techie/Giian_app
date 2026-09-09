@@ -32,3 +32,32 @@
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
+.invoice-terms-textarea{min-height:92px;resize:vertical;padding-top:10px}.document-terms-card{padding:14px 16px;border:1px solid var(--border-color);border-radius:var(--radius-md);background:var(--bg-muted)}.document-terms-card strong{display:block;margin-bottom:6px}.document-terms-card p{margin:0;white-space:pre-wrap;color:var(--text-secondary);line-height:1.6}
+
+
+/* E-sign & Company Stamp block in Invoice details modal */
+.invoice-esign-stamp-block {
+  border-top: 1px dashed var(--border-color, #e2e2e2);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+
+.invoice-esign-stamp-inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 24px;
+}
+
+.invoice-esign-img {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
+}
+
+.invoice-stamp-img {
+  height: 90px;
+  width: 90px;
+  object-fit: contain;
+  opacity: 0.9;
+}

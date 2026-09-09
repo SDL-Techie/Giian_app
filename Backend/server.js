@@ -17,6 +17,9 @@ const validateEnvironment = () => {
   if (process.env.NODE_ENV === "production" && !process.env.CLIENT_URL) {
     throw new Error("CLIENT_URL must be configured in production");
   }
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_NON_TRANSACTIONAL_DEV === "true") {
+    throw new Error("ALLOW_NON_TRANSACTIONAL_DEV must not be true in production");
+  }
 };
 
 const startServer = async () => {

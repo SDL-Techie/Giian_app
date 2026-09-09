@@ -29,7 +29,7 @@ export const updateCategory = async (req, res, next) => {
       if (!["Active", "Inactive"].includes(req.body.status)) return res.status(400).json({ success: false, message: "Status must be Active or Inactive" });
       updates.status = req.body.status;
     }
-    const data = await Category.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+    const data = await Category.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after', runValidators: true });
     if (!data) return res.status(404).json({ success: false, message: "Category not found" });
     res.json({ success: true, message: "Category updated successfully", data });
   } catch (e) { next(e); }
@@ -39,7 +39,7 @@ export const deleteCategory = async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid category id" });
     if (await Product.exists({ category: req.params.id, status: "Active" })) return res.status(400).json({ success: false, message: "Category is used by active products and cannot be deactivated" });
-    const data = await Category.findByIdAndUpdate(req.params.id, { status: "Inactive" }, { new: true });
+    const data = await Category.findByIdAndUpdate(req.params.id, { status: "Inactive" }, { returnDocument: 'after' });
     if (!data) return res.status(404).json({ success: false, message: "Category not found" });
     res.json({ success: true, message: "Category deactivated successfully", data });
   } catch (e) { next(e); }

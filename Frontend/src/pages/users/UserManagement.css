@@ -49,3 +49,32 @@
 .permissions-scroll { overflow-x:auto; }
 .modal-actions { display:flex; justify-content:flex-end; gap:12px; flex-wrap:wrap; margin-top:8px; }
 @media (max-width: 640px) { .responsive-actions { width:100%; } .responsive-actions > * { flex:1; } .modal-actions > * { flex:1; } }
+
+
+.esign-thumb {
+  height: 32px;
+  max-width: 90px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.esign-preview {
+  margin-top: 8px;
+  height: 60px;
+  max-width: 200px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.form-file-input {
+  display: block;
+  width: 100%;
+  padding: 8px 0;
+  font-size: 0.9rem;
+}

@@ -12,6 +12,8 @@ const unsupportedTransaction = (error) => {
 
 // Production requires MongoDB transactions (Atlas or replica set).
 // Local standalone MongoDB can optionally fall back for development only.
+let fallbackNoticeLogged = false;
+
 export const withMongoTransaction = async (work) => {
   const session = await mongoose.startSession();
   try {
@@ -28,7 +30,10 @@ export const withMongoTransaction = async (work) => {
 
     if (!canFallback) throw error;
 
-    logger.warn("MongoDB transactions are unavailable; using development-only non-transactional fallback");
+    if (!fallbackNoticeLogged) {
+      logger.info("Local standalone MongoDB detected; development transaction fallback is active. Production still requires MongoDB Atlas or a replica set.");
+      fallbackNoticeLogged = true;
+    }
     return work(null);
   } finally {
     await session.endSession();

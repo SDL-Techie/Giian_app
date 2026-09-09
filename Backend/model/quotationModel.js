@@ -46,6 +46,12 @@ const quotationSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    warrantyTerms: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [2000, "Warranty terms are too long"],
+    },
     items: {
       type: [quotationItemSchema],
       validate: [(arr) => arr.length > 0, "At least one product is required"],
@@ -82,6 +88,18 @@ const quotationSchema = new mongoose.Schema(
       type: String,
       enum: ["Open", "Converted", "Cancelled"],
       default: "Open",
+    },
+     approvalStatus: {
+      type: String,
+      enum: ["Pending", "Approved"],
+      default: "Pending",
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    approvedAt: {
+      type: Date,
     },
     pdfUrl: { type: String },
     pdfDubaiUrl: { type: String },

@@ -8,7 +8,7 @@ const counterSchema = new mongoose.Schema({
 const Counter = mongoose.model("Counter", counterSchema);
 
 export const getNextSequence = async (key, prefix = "", session = null) => {
-  const options = { new: true, upsert: true, setDefaultsOnInsert: true };
+  const options = { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true };
   if (session) options.session = session;
   const counter = await Counter.findOneAndUpdate({ key }, { $inc: { seq: 1 } }, options);
   return `${prefix}${String(counter.seq).padStart(6, "0")}`;

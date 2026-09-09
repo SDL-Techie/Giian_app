@@ -16,6 +16,7 @@ export interface Invoice {
   customer: Customer | { _id: string; companyName: string; contactPersonName?: string; mobileNumber?: string; companyAddress?: string };
   invoiceDate: string;
   referenceNo?: string;
+  paymentTerms?: string;
   quotation?: Quotation | string | null;
   items: InvoiceItem[];
   discount: number;
@@ -28,6 +29,9 @@ export interface Invoice {
   salesPerson?: User | { _id: string; name: string };
   status: 'Active' | 'Cancelled';
   paymentStatus: 'Unpaid' | 'Partially Paid' | 'Paid';
+  approvalStatus?: 'Pending' | 'Approved';
+  approvedBy?: User | { _id: string; name: string } | string | null;
+  approvedAt?: string;
   cancelledAt?: string;
   cancelledReason?: string;
   pdfUrl?: string;
@@ -41,6 +45,7 @@ export interface CreateInvoicePayload {
   customer: string;
   invoiceDate: string;
   referenceNo?: string;
+  paymentTerms?: string;
   quotation?: string;
   items: { product: string; qty: number; price: number }[];
   discount?: number;

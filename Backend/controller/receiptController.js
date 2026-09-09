@@ -3,7 +3,7 @@ import Invoice from "../model/invoiceModel.js";
 import Customer from "../model/customerModel.js";
 import { getNextSequence } from "../model/counterModel.js";
 import { isValidObjectId, isFiniteNumber } from "../utils/validators.js";
-import { generateDocumentPdf } from "../utils/pdfGenerator.js";
+import { generateReceiptPdf } from "../utils/pdfGenerator.js";
 import { withMongoTransaction } from "../utils/transaction.js";
 import { logger } from "../utils/logger.js";
 
@@ -64,16 +64,16 @@ const applyValidatedPayments = async (allocations, invoiceMap, session) => {
 };
 
 const attachReceiptPdf = async (receipt, customer, title, paymentMode) => {
-  const pdfPath = await generateDocumentPdf({
-    title,
-    docNumber: receipt.receiptNo,
-    fileNamePrefix: title.toLowerCase().replace(/\s+/g, "-"),
-    metaLines: [
-      { label: "Date", value: new Date().toDateString() },
-      ...(paymentMode ? [{ label: "Mode of Payment", value: paymentMode }] : []),
-    ],
-    customer: { companyName: customer.companyName, contactPersonName: customer.contactPersonName },
-    summaryLines: [{ label: "Amount", value: Number(receipt.amount).toFixed(2) }],
+  const populated = await Receipt.findById(receipt._id)
+    .populate("allocations.invoice", "invoiceNo balanceAmount totalAmount paidAmount")
+    .populate("createdBy", "name esignUrl");
+  const pdfPath = await generateReceiptPdf({
+    receipt: populated || receipt,
+    customer,
+    allocations: populated?.allocations || [],
+    paymentMode,
+    receiptType: receipt.type || title,
+    createdBy: populated?.createdBy || null,
   });
   receipt.pdfUrl = `/${pdfPath}`;
   await receipt.save();

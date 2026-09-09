@@ -11,6 +11,14 @@ export const connectDB = async () => {
       maxPoolSize: Number(process.env.DB_MAX_POOL_SIZE || 20),
       minPoolSize: Number(process.env.DB_MIN_POOL_SIZE || 0),
     });
+    if (process.env.NODE_ENV === "production") {
+      const hello = await data.connection.db.admin().command({ hello: 1 });
+      const transactionCapable = Boolean(hello?.setName) || hello?.msg === "isdbgrid";
+      if (!transactionCapable) {
+        await data.connection.close();
+        throw new Error("Production requires MongoDB Atlas, a replica set, or mongos because financial operations use transactions");
+      }
+    }
     logger.info("MongoDB connected", { host: data.connection.host, database: data.connection.name });
     return data;
   } catch (err) {

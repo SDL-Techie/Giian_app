@@ -25,14 +25,19 @@ export const invoiceService = {
     const i:any=res.data.data!; return {...i,pdfUrl:resolveApiFileUrl(i.pdfUrl),pdfDubaiUrl:resolveApiFileUrl(i.pdfDubaiUrl)};
   },
 
-  createInvoiceFromQuotation: async (quotationId: string): Promise<Invoice> => {
-    const res = await api.post<ApiResponse<Invoice>>(`/invoices/from-quotation/${quotationId}`);
+  createInvoiceFromQuotation: async (quotationId: string, paymentTerms?: string): Promise<Invoice> => {
+    const res = await api.post<ApiResponse<Invoice>>(`/invoices/from-quotation/${quotationId}`, { paymentTerms: paymentTerms || '' });
     const i:any=res.data.data!; return {...i,pdfUrl:resolveApiFileUrl(i.pdfUrl),pdfDubaiUrl:resolveApiFileUrl(i.pdfDubaiUrl)};
   },
 
   generateInvoicePdf: async (id: string, size: 'A4' | 'A5'): Promise<string> => {
     const res = await api.get<ApiResponse<{ url: string; pageSize: string }>>(`/invoices/${id}/pdf`, { params: { size } });
     return resolveApiFileUrl(res.data.data?.url || '');
+  },
+
+  approveInvoice: async (id: string): Promise<Invoice> => {
+    const res = await api.put<ApiResponse<Invoice>>(`/invoices/${id}/approve`);
+    return res.data.data!;
   },
 
   cancelInvoice: async (id: string, reason?: string): Promise<Invoice> => {

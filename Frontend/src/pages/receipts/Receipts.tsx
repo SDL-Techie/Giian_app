@@ -16,6 +16,7 @@ import Modal from '../../components/common/modal/Modal';
 import Badge from '../../components/common/badge/Badge';
 import DataTransferBar from '../../components/common/data-transfer/DataTransferBar';
 import './Receipts.css';
+import { downloadProtectedFile, fetchProtectedFile } from '../../utils/fileDownload';
 
 type ReceiptMode = 'Advance' | 'Collection' | 'AdvanceAdjustment';
 
@@ -37,11 +38,14 @@ export const Receipts: React.FC = () => {
   const [pendingInvoices, setPendingInvoices] = useState<Invoice[]>([]);
   const [advanceBalance, setAdvanceBalance] = useState(0);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState<number | ''>('');
   const [isLoadingCustomerData, setIsLoadingCustomerData] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [viewingReceipt, setViewingReceipt] = useState<Receipt | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [previewReceipt, setPreviewReceipt] = useState<Receipt | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -63,7 +67,7 @@ export const Receipts: React.FC = () => {
 
   const loadCustomerReceiptData = useCallback(async (customerId: string) => {
     setSelectedInvoiceId('');
-    setAmount(0);
+    setAmount('');
     setPendingInvoices([]);
     setAdvanceBalance(0);
     if (!customerId) return;
@@ -101,22 +105,22 @@ export const Receipts: React.FC = () => {
     setSelectedCustomerId(customers[0]._id);
     setPaymentMode('Bank');
     setSelectedInvoiceId('');
-    setAmount(0);
+    setAmount('');
     setIsModalOpen(true);
   };
 
   const handleCreateReceipt = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCustomerId) return toast.warning('Please select a customer');
-    if (amount <= 0) return toast.warning('Amount must be greater than zero');
+    if (Number(amount) <= 0) return toast.warning('Amount must be greater than zero');
 
     if (receiptType !== 'Advance' && !selectedInvoiceId) {
       return toast.warning('Please select a pending invoice');
     }
-    if (selectedInvoice && amount > selectedInvoice.balanceAmount) {
+    if (selectedInvoice && Number(amount) > selectedInvoice.balanceAmount) {
       return toast.warning(`Amount cannot exceed invoice balance of AED ${selectedInvoice.balanceAmount.toFixed(2)}`);
     }
-    if (receiptType === 'AdvanceAdjustment' && amount > advanceBalance) {
+    if (receiptType === 'AdvanceAdjustment' && Number(amount) > advanceBalance) {
       return toast.warning(`Adjustment cannot exceed available advance of AED ${advanceBalance.toFixed(2)}`);
     }
 
@@ -126,19 +130,19 @@ export const Receipts: React.FC = () => {
       if (receiptType === 'Advance') {
         created = await receiptService.createAdvanceReceipt({
           customer: selectedCustomerId,
-          amount,
+          amount: Number(amount),
           paymentMode,
         });
       } else if (receiptType === 'Collection') {
         created = await receiptService.createCollectionReceipt({
           customer: selectedCustomerId,
           paymentMode,
-          allocations: [{ invoice: selectedInvoiceId, amount }],
+          allocations: [{ invoice: selectedInvoiceId, amount: Number(amount) }],
         });
       } else {
         created = await receiptService.createAdvanceAdjustment({
           customer: selectedCustomerId,
-          allocations: [{ invoice: selectedInvoiceId, amount }],
+          allocations: [{ invoice: selectedInvoiceId, amount: Number(amount) }],
         });
       }
       toast.success(`${created.receiptNo} created successfully`);
@@ -161,6 +165,26 @@ export const Receipts: React.FC = () => {
     } finally {
       setIsLoadingDetails(false);
     }
+  };
+
+  const openReceiptPdfPreview = async (receipt: Receipt) => {
+    if (!receipt.pdfUrl) return;
+    setPreviewReceipt(receipt);
+    setIsPreviewLoading(true);
+    try {
+      const blob = await fetchProtectedFile(receipt.pdfUrl);
+      const url = URL.createObjectURL(blob);
+      setPreviewUrl((old) => { if (old) URL.revokeObjectURL(old); return url; });
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to preview receipt');
+      setPreviewReceipt(null);
+    } finally { setIsPreviewLoading(false); }
+  };
+
+  const closeReceiptPreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl('');
+    setPreviewReceipt(null);
   };
 
   return (
@@ -204,7 +228,7 @@ export const Receipts: React.FC = () => {
             { header: 'Amount', accessor: (r) => `AED ${Number(r.amount || 0).toFixed(2)}` },
             { header: 'Payment', accessor: (r) => r.paymentMode || 'Internal adjustment' },
             { header: 'Date', accessor: (r) => r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '-' },
-            { header: 'Actions', accessor: (r) => <div className="table-actions"><button className="action-icon-btn btn-view" onClick={() => openReceiptDetails(r)} title="View receipt"><Eye size={16} /></button>{r.pdfUrl && <a href={r.pdfUrl} target="_blank" rel="noreferrer" className="action-icon-btn btn-view" title="Open PDF"><Download size={16} /></a>}</div> },
+            { header: 'Actions', accessor: (r) => <div className="table-actions"><button className="action-icon-btn btn-view" onClick={() => openReceiptDetails(r)} title="View receipt details"><ReceiptIcon size={16} /></button>{r.pdfUrl && <><button type="button" className="action-icon-btn btn-view" title="Preview receipt PDF" onClick={() => void openReceiptPdfPreview(r)}><Eye size={16} /></button><button type="button" className="action-icon-btn btn-view" title="Download receipt PDF" onClick={async () => { try { await downloadProtectedFile(r.pdfUrl!, `${r.receiptNo}.pdf`); } catch(err:any) { toast.error(err.message || 'Failed to download receipt'); } }}><Download size={16} /></button></>}</div> },
           ]}
           emptyTitle="No receipts found"
           emptyDescription="Receipts matching the selected filters will appear here."
@@ -214,7 +238,7 @@ export const Receipts: React.FC = () => {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Record Receipt" size="lg">
         <div className="receipt-type-picker">
           {(['Advance', 'Collection', 'AdvanceAdjustment'] as ReceiptMode[]).map((mode) => (
-            <button key={mode} type="button" className={`receipt-type-choice ${receiptType === mode ? 'active' : ''}`} onClick={() => { setReceiptType(mode); setSelectedInvoiceId(''); setAmount(0); }}>
+            <button key={mode} type="button" className={`receipt-type-choice ${receiptType === mode ? 'active' : ''}`} onClick={() => { setReceiptType(mode); setSelectedInvoiceId(''); setAmount(''); }}>
               {mode === 'AdvanceAdjustment' && <ArrowRightLeft size={16} />} {mode === 'AdvanceAdjustment' ? 'Advance Adjustment' : mode}
             </button>
           ))}
@@ -227,7 +251,7 @@ export const Receipts: React.FC = () => {
             <Select
               label={isLoadingCustomerData ? 'Loading pending invoices...' : 'Pending Invoice'}
               value={selectedInvoiceId}
-              onChange={(e) => { setSelectedInvoiceId(e.target.value); const invoice = pendingInvoices.find((i) => i._id === e.target.value); setAmount(invoice?.balanceAmount || 0); }}
+              onChange={(e) => { setSelectedInvoiceId(e.target.value); const invoice = pendingInvoices.find((i) => i._id === e.target.value); setAmount(invoice?.balanceAmount ?? ''); }}
               disabled={isLoadingCustomerData}
               options={[{ value: '', label: '-- Select pending invoice --' }, ...pendingInvoices.map((i) => ({ value: i._id, label: `${i.invoiceNo} · Balance AED ${i.balanceAmount.toFixed(2)}` }))]}
               isRequired
@@ -239,7 +263,7 @@ export const Receipts: React.FC = () => {
           )}
 
           <div className="form-grid-2">
-            <Input type="number" min="0.01" step="0.01" label="Amount" value={amount} onChange={(e) => setAmount(Number(e.target.value))} isRequired />
+            <Input type="number" min="0.01" step="0.01" label="Amount" value={amount} onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))} placeholder="Enter amount" isRequired />
             {receiptType !== 'AdvanceAdjustment' ? (
               <Select label="Payment Mode" value={paymentMode} onChange={(e) => setPaymentMode(e.target.value as 'Cash' | 'Bank')} options={[{ value: 'Cash', label: 'Cash' }, { value: 'Bank', label: 'Bank' }]} isRequired />
             ) : <Input label="Adjustment Method" value="FIFO from available advance receipts" disabled />}
@@ -247,6 +271,17 @@ export const Receipts: React.FC = () => {
 
           <div className="modal-actions"><Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)} disabled={isSaving}>Cancel</Button><Button type="submit" variant="primary" isLoading={isSaving} loadingText="Recording...">Record Receipt</Button></div>
         </form>
+      </Modal>
+
+      <Modal isOpen={!!previewReceipt} onClose={closeReceiptPreview} title={`Receipt Preview · ${previewReceipt?.receiptNo || ''}`} size="xl">
+        <div className="receipt-pdf-preview">
+          {isPreviewLoading && <div className="inline-loading">Loading receipt preview…</div>}
+          {!isPreviewLoading && previewUrl && <iframe src={previewUrl} title={`Receipt ${previewReceipt?.receiptNo || ''}`} />}
+          <div className="modal-actions">
+            <Button type="button" variant="secondary" onClick={closeReceiptPreview}>Close</Button>
+            {previewReceipt?.pdfUrl && <Button type="button" variant="primary" icon={<Download size={16} />} onClick={() => void downloadProtectedFile(previewReceipt.pdfUrl!, `${previewReceipt.receiptNo}.pdf`)}>Download</Button>}
+          </div>
+        </div>
       </Modal>
 
       <Modal isOpen={!!viewingReceipt} onClose={() => setViewingReceipt(null)} title={`Receipt ${viewingReceipt?.receiptNo || ''}`} size="md">

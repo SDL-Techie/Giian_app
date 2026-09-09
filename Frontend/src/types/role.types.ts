@@ -43,3 +43,4 @@ export interface UpdateRolePayload {
   permissions?: RolePermissions;
   status?: 'Active' | 'Inactive';
 }
+

@@ -3,3 +3,4 @@
   flex-direction: column;
   gap: 20px;
 }
+.quotation-terms-textarea{min-height:92px;resize:vertical;padding-top:10px}.document-terms-card{padding:14px 16px;border:1px solid var(--border-color);border-radius:var(--radius-md);background:var(--bg-muted)}.document-terms-card strong{display:block;margin-bottom:6px}.document-terms-card p{margin:0;white-space:pre-wrap;color:var(--text-secondary);line-height:1.6}

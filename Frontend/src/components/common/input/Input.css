@@ -77,3 +77,4 @@
   font-size: var(--font-size-xs);
   color: var(--text-muted);
 }
+.input-field.has-right-icon{padding-right:42px}.input-password-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;background:transparent;color:var(--text-muted);cursor:pointer}.input-password-toggle:hover{background:var(--bg-muted);color:var(--text-primary)}.input-password-toggle:focus-visible{outline:2px solid var(--border-color-focus);outline-offset:1px}

@@ -26,7 +26,7 @@ import './Purchases.css';
 interface LineItemInput {
   product: string;
   qty: number;
-  cost: number;
+  cost: number | '';
 }
 
 export const Purchases: React.FC = () => {
@@ -62,7 +62,7 @@ export const Purchases: React.FC = () => {
   const [vatPercent, setVatPercent] = useState<number>(5);
   const [invoiceFiles, setInvoiceFiles] = useState<File[]>([]);
   const [items, setItems] = useState<LineItemInput[]>([
-    { product: '', qty: 1, cost: 0 },
+    { product: '', qty: 1, cost: '' },
   ]);
 
   const loadData = useCallback(async () => {
@@ -86,7 +86,7 @@ export const Purchases: React.FC = () => {
   }, [loadData]);
 
   const addItemRow = () => {
-    setItems((prev) => [...prev, { product: products[0]?._id || '', qty: 1, cost: 0 }]);
+    setItems((prev) => [...prev, { product: products[0]?._id || '', qty: 1, cost: '' }]);
   };
 
   const removeItemRow = (index: number) => {
@@ -103,7 +103,7 @@ export const Purchases: React.FC = () => {
   };
 
   // Calculations
-  const subTotalCost = items.reduce((sum, item) => sum + item.qty * item.cost, 0);
+  const subTotalCost = items.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.cost || 0), 0);
   const vatAmount = (subTotalCost * (vatPercent || 0)) / 100;
   const totalCost = subTotalCost + vatAmount;
 
@@ -117,7 +117,7 @@ export const Purchases: React.FC = () => {
       toast.error('Invoice number is required');
       return;
     }
-    if (items.some((i) => !i.product || i.qty <= 0 || i.cost < 0)) {
+    if (items.some((i) => !i.product || i.qty <= 0 || i.cost === '' || Number(i.cost) < 0)) {
       toast.error('Please select valid products with positive quantity and non-negative cost');
       return;
     }
@@ -128,7 +128,7 @@ export const Purchases: React.FC = () => {
         dateOfPurchase,
         vendorName,
         invoiceNumber,
-        items,
+        items: items.map((i) => ({ ...i, cost: Number(i.cost) })),
         vatPercent: Number(vatPercent),
         invoiceFiles: invoiceFiles.length ? invoiceFiles : undefined,
       };
@@ -139,7 +139,7 @@ export const Purchases: React.FC = () => {
       // Reset form
       setVendorName('');
       setInvoiceNumber('');
-      setItems([{ product: products[0]?._id || '', qty: 1, cost: 0 }]);
+      setItems([{ product: products[0]?._id || '', qty: 1, cost: '' }]);
       setInvoiceFiles([]);
       loadData();
     } catch (err: any) {
@@ -184,7 +184,7 @@ export const Purchases: React.FC = () => {
               if (products.length === 0) {
                 toast.warning('Please create at least one product before recording purchases.');
               }
-              setItems([{ product: products[0]?._id || '', qty: 1, cost: 0 }]);
+              setItems([{ product: products[0]?._id || '', qty: 1, cost: '' }]);
               setIsNewPurchaseOpen(true);
             }}
             id="btn-new-purchase"
@@ -387,10 +387,10 @@ export const Purchases: React.FC = () => {
                     min="0"
                     step="any"
                     value={item.cost}
-                    onChange={(e) => updateItemRow(idx, 'cost', Number(e.target.value))}
+                    onChange={(e) => updateItemRow(idx, 'cost', e.target.value === '' ? '' : Number(e.target.value))}
                   />
                   <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
-                    AED {(item.qty * item.cost).toFixed(2)}
+                    AED {(Number(item.qty || 0) * Number(item.cost || 0)).toFixed(2)}
                   </div>
                   <button
                     type="button"
