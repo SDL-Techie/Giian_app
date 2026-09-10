@@ -8,6 +8,7 @@
 //   Trash2,
 //   Download,
 //   Calendar,
+//   Eye,
 // } from 'lucide-react';
 // import { useAuth } from '../../context/AuthContext';
 // import { useToast } from '../../context/ToastContext';
@@ -58,7 +59,8 @@
 //   const [contactPersonName, setContactPersonName] = useState('');
 //   const [companyAddress, setCompanyAddress] = useState('');
 //   const [creditLimit, setCreditLimit] = useState<number | ''>('');
-//   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
+//   // const [documentFiles, setDocumentFiles] = useState<File[]>([]);
+//   const [documentFiles, setDocumentFiles] = useState<(File | null)[]>([]);
 //   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
 //   // Reports state
@@ -68,6 +70,9 @@
 //   const [reportQuotations, setReportQuotations] = useState<Quotation[]>([]);
 //   const [reportInvoices, setReportInvoices] = useState<Invoice[]>([]);
 //   const [isReportLoading, setIsReportLoading] = useState(false);
+
+//   // NEW: view-documents modal state
+//   const [viewingDocsCustomer, setViewingDocsCustomer] = useState<Customer | null>(null);
 
 //   const loadCustomers = useCallback(async () => {
 //     setIsLoading(true);
@@ -113,6 +118,18 @@
 //     setIsFormOpen(true);
 //   };
 
+//   // NEW: helper to get a normalized document list for any customer,
+//   // falling back to the legacy single-url field for old records.
+//   const getCustomerDocuments = (c: Customer) => {
+//     if (c.companyDocuments && c.companyDocuments.length > 0) {
+//       return c.companyDocuments;
+//     }
+//     if (c.companyDocumentUrl) {
+//       return [{ id: 'legacy', filename: 'Document', url: c.companyDocumentUrl }];
+//     }
+//     return [];
+//   };
+
 //   const validateForm = () => {
 //     const errs: Record<string, string> = {};
 //     if (!companyName.trim()) {
@@ -142,7 +159,10 @@
 //         contactPersonName: contactPersonName || undefined,
 //         companyAddress: companyAddress || undefined,
 //         creditLimit: Number(creditLimit || 0),
-//         companyDocuments: documentFiles.length ? documentFiles : undefined,
+//         // companyDocuments: documentFiles.length ? documentFiles : undefined,
+//         companyDocuments: documentFiles.filter(
+//   (file): file is File => file !== null
+// ),
 //       };
 
 //       if (editingCustomer) {
@@ -311,21 +331,28 @@
 //                 accessor: (c) => `AED ${Number(c.creditLimit || 0).toLocaleString()}`,
 //               },
 //               {
-//                 header: 'Document',
-//                 accessor: (c) =>
-//                   c.companyDocumentUrl ? (
-//                     <a
-//                       href={c.companyDocumentUrl}
-//                       target="_blank"
-//                       rel="noopener noreferrer"
+//                 /* CHANGED: "Document" column -> "Documents" column, shows a View button
+//                    that opens a modal listing every uploaded file for that customer. */
+//                 header: 'Documents',
+//                 accessor: (c) => {
+//                   const docs = getCustomerDocuments(c);
+//                   if (docs.length === 0) {
+//                     return <span style={{ color: 'var(--text-muted)' }}>None</span>;
+//                   }
+//                   return (
+//                     <button
+//                       type="button"
 //                       className="action-icon-btn btn-view"
-//                       title="Download Document"
+//                       title="View Documents"
+//                       onClick={() => setViewingDocsCustomer(c)}
 //                     >
-//                       <Download size={16} />
-//                     </a>
-//                   ) : (
-//                     <span style={{ color: 'var(--text-muted)' }}>None</span>
-//                   ),
+//                       <Eye size={16} />
+//                       <span style={{ marginLeft: 4, fontSize: 12 }}>
+//                         {docs.length} file{docs.length > 1 ? 's' : ''}
+//                       </span>
+//                     </button>
+//                   );
+//                 },
 //               },
 //               {
 //                 header: 'Status',
@@ -575,11 +602,120 @@
 //             />
 //             <div className="input-group">
 //               <label className="input-label">Upload Company Documents (multiple)</label>
-//               <input
+//               {/* <input
 //                 type="file"
 //                 className="input-field"
 //                 multiple accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" onChange={(e) => setDocumentFiles(Array.from(e.target.files || []))}
-//               />
+//               /> */}
+//               <div className="document-upload-list">
+//   {documentFiles.map((file, index) => (
+//     <div key={index} className="document-upload-row">
+//       <input
+//         type="file"
+//         className="input-field"
+//         accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
+//         onChange={(e) => {
+//           const selectedFile = e.target.files?.[0];
+
+//           if (!selectedFile) return;
+
+//           setDocumentFiles((prev) => {
+//             const updated = [...prev];
+//             updated[index] = selectedFile;
+//             return updated;
+//           });
+//         }}
+//       />
+
+//       {index === documentFiles.length - 1 && (
+//         <button
+//           type="button"
+//           className="add-document-btn"
+//           onClick={() => setDocumentFiles((prev) => [...prev, null as any])}
+//           title="Add another document"
+//         >
+//           +
+//         </button>
+//       )}
+
+//       {documentFiles.length > 1 && (
+//         <button
+//           type="button"
+//           className="remove-document-btn"
+//           onClick={() => {
+//             setDocumentFiles((prev) =>
+//               prev.filter((_, i) => i !== index)
+//             );
+//           }}
+//           title="Remove document"
+//         >
+//           ×
+//         </button>
+//       )}
+//     </div>
+//   ))}
+
+//   {documentFiles.length === 0 && (
+//     <div className="document-upload-row">
+//       <input
+//         type="file"
+//         className="input-field"
+//         accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
+//         onChange={(e) => {
+//           const selectedFile = e.target.files?.[0];
+
+//           if (!selectedFile) return;
+
+//           setDocumentFiles([selectedFile]);
+//         }}
+//       />
+
+//       <button
+//         type="button"
+//         className="add-document-btn"
+//         onClick={() => setDocumentFiles([null as any])}
+//         title="Add another document"
+//       >
+//         +
+//       </button>
+//     </div>
+//   )}
+// </div>
+//               {/* NEW: show files already saved on this customer when editing */}
+//               {editingCustomer && getCustomerDocuments(editingCustomer).length > 0 && (
+//                 <div className="document-list" style={{ marginTop: 8 }}>
+//                   <label className="input-label" style={{ fontSize: 12 }}>Already uploaded:</label>
+            
+//                  {getCustomerDocuments(editingCustomer).map((doc, idx) => (
+//   <div key={doc.id || idx} className="document-list-item">
+//     <span className="document-filename" title={doc.filename}>
+//       {doc.filename}
+//     </span>
+
+//     <a
+//       href={doc.url}
+//       target="_blank"
+//       rel="noopener noreferrer"
+//       className="action-icon-btn btn-view"
+//       title="View"
+//     >
+//       <Eye size={14} />
+//     </a>
+
+//     <a
+//       href={doc.url}
+//       download
+//       target="_blank"
+//       rel="noopener noreferrer"
+//       className="action-icon-btn btn-view"
+//       title="Download"
+//     >
+//       <Download size={14} />
+//     </a>
+//   </div>
+// ))}
+//                 </div>
+//               )}
 //             </div>
 //           </div>
 
@@ -599,6 +735,59 @@
 //         </form>
 //       </Modal>
 
+//       {/* NEW: View Documents Modal */}
+//       <Modal
+//         isOpen={!!viewingDocsCustomer}
+//         onClose={() => setViewingDocsCustomer(null)}
+//         title={`Documents - ${viewingDocsCustomer?.companyName || ''}`}
+//         size="md"
+//       >
+//         <div className="document-list">
+//           {viewingDocsCustomer &&
+//             getCustomerDocuments(viewingDocsCustomer).map((doc, idx) => (
+//               <div
+//                 key={doc.id || idx}
+//                 className="document-list-item"
+//                 style={{
+//                   justifyContent: 'space-between',
+//                   padding: '8px 0',
+//                   borderBottom: '1px solid var(--border-color, #eee)',
+//                 }}
+//               >
+//                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+//                   <FileText size={16} />
+//                   {doc.filename || `Document ${idx + 1}`}
+//                 </span>
+//            <span style={{ display: 'flex', gap: 8 }}>
+//   <a
+//     href={doc.url}
+//     target="_blank"
+//     rel="noopener noreferrer"
+//     className="action-icon-btn btn-view"
+//     title="View"
+//   >
+//     <Eye size={16} />
+//   </a>
+
+//   <a
+//     href={doc.url}
+//     download
+//     target="_blank"
+//     rel="noopener noreferrer"
+//     className="action-icon-btn btn-view"
+//     title="Download"
+//   >
+//     <Download size={16} />
+//   </a>
+// </span>
+//               </div>
+//             ))}
+//           {viewingDocsCustomer && getCustomerDocuments(viewingDocsCustomer).length === 0 && (
+//             <p style={{ color: 'var(--text-muted)' }}>No documents uploaded.</p>
+//           )}
+//         </div>
+//       </Modal>
+
 //       {/* Deactivate Confirm Dialog */}
 //       <ConfirmDialog
 //         isOpen={!!customerToDeactivate}
@@ -614,7 +803,6 @@
 // };
 
 // export default Customers;
-
 
 
 
@@ -679,7 +867,6 @@ export const Customers: React.FC = () => {
   const [contactPersonName, setContactPersonName] = useState('');
   const [companyAddress, setCompanyAddress] = useState('');
   const [creditLimit, setCreditLimit] = useState<number | ''>('');
-  // const [documentFiles, setDocumentFiles] = useState<File[]>([]);
   const [documentFiles, setDocumentFiles] = useState<(File | null)[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -691,8 +878,12 @@ export const Customers: React.FC = () => {
   const [reportInvoices, setReportInvoices] = useState<Invoice[]>([]);
   const [isReportLoading, setIsReportLoading] = useState(false);
 
-  // NEW: view-documents modal state
+  // View-documents modal state
   const [viewingDocsCustomer, setViewingDocsCustomer] = useState<Customer | null>(null);
+
+  // Tracks which document (by key) is currently being fetched, so we can
+  // show a per-row loading/disabled state instead of a global spinner.
+  const [busyDocKey, setBusyDocKey] = useState<string | null>(null);
 
   const loadCustomers = useCallback(async () => {
     setIsLoading(true);
@@ -738,8 +929,8 @@ export const Customers: React.FC = () => {
     setIsFormOpen(true);
   };
 
-  // NEW: helper to get a normalized document list for any customer,
-  // falling back to the legacy single-url field for old records.
+  // Normalized document list for any customer, falling back to the
+  // legacy single-url field for old records.
   const getCustomerDocuments = (c: Customer) => {
     if (c.companyDocuments && c.companyDocuments.length > 0) {
       return c.companyDocuments;
@@ -748,6 +939,52 @@ export const Customers: React.FC = () => {
       return [{ id: 'legacy', filename: 'Document', url: c.companyDocumentUrl }];
     }
     return [];
+  };
+
+  // ---------------------------------------------------------------------
+  // AUTHENTICATED DOCUMENT VIEW / DOWNLOAD
+  // A plain <a href={url}> or <a href={url} download> makes an
+  // unauthenticated browser request, which your backend rejects with
+  // "Access Denied. Login Required". Instead we fetch the file through
+  // customerService.getCustomerDocumentBlob (uses the shared axios
+  // instance, so the auth header/cookie is attached automatically),
+  // then either open the resulting blob in a new tab (View) or trigger
+  // a save-as from it (Download).
+  // ---------------------------------------------------------------------
+  const handleViewDocument = async (fileUrl: string, key: string) => {
+    if (!fileUrl) return;
+    setBusyDocKey(key);
+    try {
+      const blob = await customerService.getCustomerDocumentBlob(fileUrl);
+      const objectUrl = window.URL.createObjectURL(blob);
+      window.open(objectUrl, '_blank', 'noopener,noreferrer');
+      // Revoke a bit later so the newly opened tab has time to load it.
+      setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60000);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to open document');
+    } finally {
+      setBusyDocKey(null);
+    }
+  };
+
+  const handleDownloadDocument = async (fileUrl: string, filename: string, key: string) => {
+    if (!fileUrl) return;
+    setBusyDocKey(key);
+    try {
+      const blob = await customerService.getCustomerDocumentBlob(fileUrl);
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename || 'document';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to download document');
+    } finally {
+      setBusyDocKey(null);
+    }
   };
 
   const validateForm = () => {
@@ -779,10 +1016,7 @@ export const Customers: React.FC = () => {
         contactPersonName: contactPersonName || undefined,
         companyAddress: companyAddress || undefined,
         creditLimit: Number(creditLimit || 0),
-        // companyDocuments: documentFiles.length ? documentFiles : undefined,
-        companyDocuments: documentFiles.filter(
-  (file): file is File => file !== null
-),
+        companyDocuments: documentFiles.filter((file): file is File => file !== null),
       };
 
       if (editingCustomer) {
@@ -817,8 +1051,13 @@ export const Customers: React.FC = () => {
   };
 
   const handleActivate = async (customer: Customer) => {
-    try { await customerService.setCustomerStatus(customer._id, 'Active'); toast.success('Customer activated successfully'); loadCustomers(); }
-    catch (err:any) { toast.error(err.message || 'Failed to activate customer'); }
+    try {
+      await customerService.setCustomerStatus(customer._id, 'Active');
+      toast.success('Customer activated successfully');
+      loadCustomers();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to activate customer');
+    }
   };
 
   const handleFetchReport = async () => {
@@ -951,8 +1190,6 @@ export const Customers: React.FC = () => {
                 accessor: (c) => `AED ${Number(c.creditLimit || 0).toLocaleString()}`,
               },
               {
-                /* CHANGED: "Document" column -> "Documents" column, shows a View button
-                   that opens a modal listing every uploaded file for that customer. */
                 header: 'Documents',
                 accessor: (c) => {
                   const docs = getCustomerDocuments(c);
@@ -1222,118 +1459,111 @@ export const Customers: React.FC = () => {
             />
             <div className="input-group">
               <label className="input-label">Upload Company Documents (multiple)</label>
-              {/* <input
-                type="file"
-                className="input-field"
-                multiple accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" onChange={(e) => setDocumentFiles(Array.from(e.target.files || []))}
-              /> */}
+
               <div className="document-upload-list">
-  {documentFiles.map((file, index) => (
-    <div key={index} className="document-upload-row">
-      <input
-        type="file"
-        className="input-field"
-        accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
-        onChange={(e) => {
-          const selectedFile = e.target.files?.[0];
+                {documentFiles.map((file, index) => (
+                  <div key={index} className="document-upload-row">
+                    <input
+                      type="file"
+                      className="input-field"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
+                      onChange={(e) => {
+                        const selectedFile = e.target.files?.[0];
+                        if (!selectedFile) return;
+                        setDocumentFiles((prev) => {
+                          const updated = [...prev];
+                          updated[index] = selectedFile;
+                          return updated;
+                        });
+                      }}
+                    />
 
-          if (!selectedFile) return;
+                    {index === documentFiles.length - 1 && (
+                      <button
+                        type="button"
+                        className="add-document-btn"
+                        onClick={() => setDocumentFiles((prev) => [...prev, null as any])}
+                        title="Add another document"
+                      >
+                        +
+                      </button>
+                    )}
 
-          setDocumentFiles((prev) => {
-            const updated = [...prev];
-            updated[index] = selectedFile;
-            return updated;
-          });
-        }}
-      />
+                    {documentFiles.length > 1 && (
+                      <button
+                        type="button"
+                        className="remove-document-btn"
+                        onClick={() => {
+                          setDocumentFiles((prev) => prev.filter((_, i) => i !== index));
+                        }}
+                        title="Remove document"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
 
-      {index === documentFiles.length - 1 && (
-        <button
-          type="button"
-          className="add-document-btn"
-          onClick={() => setDocumentFiles((prev) => [...prev, null as any])}
-          title="Add another document"
-        >
-          +
-        </button>
-      )}
+                {documentFiles.length === 0 && (
+                  <div className="document-upload-row">
+                    <input
+                      type="file"
+                      className="input-field"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
+                      onChange={(e) => {
+                        const selectedFile = e.target.files?.[0];
+                        if (!selectedFile) return;
+                        setDocumentFiles([selectedFile]);
+                      }}
+                    />
 
-      {documentFiles.length > 1 && (
-        <button
-          type="button"
-          className="remove-document-btn"
-          onClick={() => {
-            setDocumentFiles((prev) =>
-              prev.filter((_, i) => i !== index)
-            );
-          }}
-          title="Remove document"
-        >
-          ×
-        </button>
-      )}
-    </div>
-  ))}
+                    <button
+                      type="button"
+                      className="add-document-btn"
+                      onClick={() => setDocumentFiles([null as any])}
+                      title="Add another document"
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
+              </div>
 
-  {documentFiles.length === 0 && (
-    <div className="document-upload-row">
-      <input
-        type="file"
-        className="input-field"
-        accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
-        onChange={(e) => {
-          const selectedFile = e.target.files?.[0];
-
-          if (!selectedFile) return;
-
-          setDocumentFiles([selectedFile]);
-        }}
-      />
-
-      <button
-        type="button"
-        className="add-document-btn"
-        onClick={() => setDocumentFiles([null as any])}
-        title="Add another document"
-      >
-        +
-      </button>
-    </div>
-  )}
-</div>
-              {/* NEW: show files already saved on this customer when editing */}
+              {/* Files already saved on this customer when editing */}
               {editingCustomer && getCustomerDocuments(editingCustomer).length > 0 && (
                 <div className="document-list" style={{ marginTop: 8 }}>
                   <label className="input-label" style={{ fontSize: 12 }}>Already uploaded:</label>
-            
-                 {getCustomerDocuments(editingCustomer).map((doc, idx) => (
-  <div key={doc.id || idx} className="document-list-item">
-    <span className="document-filename" title={doc.filename}>
-      {doc.filename}
-    </span>
 
-    <a
-      href={doc.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="action-icon-btn btn-view"
-      title="View"
-    >
-      <Eye size={14} />
-    </a>
+                  {getCustomerDocuments(editingCustomer).map((doc, idx) => {
+                    const key = doc.id ? String(doc.id) : `${editingCustomer._id}-${idx}`;
+                    return (
+                      <div key={key} className="document-list-item">
+                        <span className="document-filename" title={doc.filename}>
+                          {doc.filename}
+                        </span>
 
-    <a
-      href={doc.url}
-      download
-      target="_blank"
-      rel="noopener noreferrer"
-      className="action-icon-btn btn-view"
-      title="Download"
-    >
-      <Download size={14} />
-    </a>
-  </div>
-))}
+                        <button
+                          type="button"
+                          className="action-icon-btn btn-view"
+                          title="View"
+                          disabled={busyDocKey === key}
+                          onClick={() => handleViewDocument(doc.url, key)}
+                        >
+                          <Eye size={14} />
+                        </button>
+
+                        <button
+                          type="button"
+                          className="action-icon-btn btn-view"
+                          title="Download"
+                          disabled={busyDocKey === key}
+                          onClick={() => handleDownloadDocument(doc.url, doc.filename, key)}
+                        >
+                          <Download size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1355,7 +1585,7 @@ export const Customers: React.FC = () => {
         </form>
       </Modal>
 
-      {/* NEW: View Documents Modal */}
+      {/* View Documents Modal */}
       <Modal
         isOpen={!!viewingDocsCustomer}
         onClose={() => setViewingDocsCustomer(null)}
@@ -1364,44 +1594,46 @@ export const Customers: React.FC = () => {
       >
         <div className="document-list">
           {viewingDocsCustomer &&
-            getCustomerDocuments(viewingDocsCustomer).map((doc, idx) => (
-              <div
-                key={doc.id || idx}
-                className="document-list-item"
-                style={{
-                  justifyContent: 'space-between',
-                  padding: '8px 0',
-                  borderBottom: '1px solid var(--border-color, #eee)',
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <FileText size={16} />
-                  {doc.filename || `Document ${idx + 1}`}
-                </span>
-           <span style={{ display: 'flex', gap: 8 }}>
-  <a
-    href={doc.url}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="action-icon-btn btn-view"
-    title="View"
-  >
-    <Eye size={16} />
-  </a>
+            getCustomerDocuments(viewingDocsCustomer).map((doc, idx) => {
+              const key = doc.id ? String(doc.id) : `${viewingDocsCustomer._id}-${idx}`;
+              return (
+                <div
+                  key={key}
+                  className="document-list-item"
+                  style={{
+                    justifyContent: 'space-between',
+                    padding: '8px 0',
+                    borderBottom: '1px solid var(--border-color, #eee)',
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <FileText size={16} />
+                    {doc.filename || `Document ${idx + 1}`}
+                  </span>
+                  <span style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      className="action-icon-btn btn-view"
+                      title="View"
+                      disabled={busyDocKey === key}
+                      onClick={() => handleViewDocument(doc.url, key)}
+                    >
+                      <Eye size={16} />
+                    </button>
 
-  <a
-    href={doc.url}
-    download
-    target="_blank"
-    rel="noopener noreferrer"
-    className="action-icon-btn btn-view"
-    title="Download"
-  >
-    <Download size={16} />
-  </a>
-</span>
-              </div>
-            ))}
+                    <button
+                      type="button"
+                      className="action-icon-btn btn-view"
+                      title="Download"
+                      disabled={busyDocKey === key}
+                      onClick={() => handleDownloadDocument(doc.url, doc.filename, key)}
+                    >
+                      <Download size={16} />
+                    </button>
+                  </span>
+                </div>
+              );
+            })}
           {viewingDocsCustomer && getCustomerDocuments(viewingDocsCustomer).length === 0 && (
             <p style={{ color: 'var(--text-muted)' }}>No documents uploaded.</p>
           )}

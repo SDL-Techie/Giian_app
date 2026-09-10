@@ -1479,7 +1479,7 @@ export const generateReceiptPdf = async ({
       y+=52; doc.font('Helvetica').text('By',28,y);
       const modes=['Cash','Cheque','Bank Transfer','Other']; let x=72;
       modes.forEach((m)=>{ const checked = (paymentMode==='Bank' && m==='Bank Transfer') || paymentMode===m; check(doc,x,y-2,checked); doc.text(m,x+16,y,{width:75}); x += m==='Bank Transfer'?112:82; });
-      doc.text('Bank',585,y); dottedLine(doc,625,y+13,760);
+      // doc.text('Bank',585,y); dottedLine(doc,625,y+13,760);
 
       y+=48; doc.text('For the purpose of',28,y).font('Helvetica-Bold').text(purpose,175,y,{width:570}); dottedLine(doc,175,y+13,760);
       // y+=44; doc.font('Helvetica').text('Contact No.',28,y).font('Helvetica-Bold').text(contactNo,175,y,{width:570}); dottedLine(doc,175,y+13,760);
