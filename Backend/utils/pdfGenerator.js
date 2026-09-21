@@ -1194,6 +1194,7 @@ export const generateBrandedPdf = async ({
   date,
   referenceNo,
   attn,
+  subject,
   customer,
   items = [],
   discount = 0,
@@ -1202,9 +1203,8 @@ export const generateBrandedPdf = async ({
   vatAmount = 0,
   totalAmount = 0,
   currency = 'AED',
-  subject,
-  quoteValidity = '15 Days',
-  deliveryTime = '2 - 3 Weeks',
+  quoteValidity = '30 Days',
+  deliveryTime = '',
   paymentTerms = '',
   warrantyTerms = '',
   approved = false,
@@ -1243,23 +1243,139 @@ export const generateBrandedPdf = async ({
       const metaY = 214 * scale;
       const rightMetaX = right - 180 * scale;
       doc.font('Helvetica').fontSize(fsBody);
-      doc.text(`Customer Name: ${safe(customer?.companyName)}`, left, metaY, { width: 300 * scale });
+      doc.text(`Customer Name: M/S. ${safe(customer?.companyName)}`, left, metaY, { width: 300 * scale });
       if (customer?.companyAddress) doc.text(`Address: ${safe(customer.companyAddress)}`, left, metaY + 14 * scale, { width: 310 * scale });
       if (customer?.telephoneNumber) doc.text(`Tel: ${safe(customer.telephoneNumber)}`, left, metaY + 28 * scale, { width: 210 * scale });
-      if (customer?.email) doc.text(`Email: ${safe(customer.email)}`, left, metaY + 42 * scale, { width: 250 * scale });
+//       if (customer?.email) doc.text(`Email: ${safe(customer.email)}`, left, metaY + 42 * scale, { width: 250 * scale });
 
-      doc.text(`${label} No : ${safe(docNumber)}`, rightMetaX, metaY, { width: 180 * scale, align: 'right' });
+// // Attn - below Email
+// if (attn) {
+//   doc.text(
+//     `Attn: ${safe(attn)}`,
+//     left,
+//     metaY + 56 * scale,
+//     { width: 250 * scale }
+//   );
+// }
+// // Customer TRN - below Attn
+// doc.text(
+//   `Customer TRN NO: ${COMPANY_TRN}`,
+//   left,
+//   metaY + 70 * scale,
+//   { width: 245 * scale }
+// );
+
+if (customer?.email) {
+  doc.text(
+    `Email: ${safe(customer.email)}`,
+    left,
+    metaY + 42 * scale,
+    { width: 250 * scale }
+  );
+}
+
+// Attn - only when available
+if (attn) {
+  doc.text(
+    `Attn: ${safe(attn)}`,
+    left,
+    metaY + 56 * scale,
+    { width: 250 * scale }
+  );
+}
+
+// Customer TRN
+const trnY = attn
+  ? metaY + 70 * scale
+  : metaY + 56 * scale;
+
+doc.text(
+  `Customer TRN NO: ${COMPANY_TRN}`,
+  left,
+  trnY,
+  { width: 245 * scale }
+);
+// Subject - below TRN
+if (subject) {
+  doc.text(
+    `Subject: ${safe(subject)}`,
+    left,
+    metaY + 84 * scale,
+    { width: contentW }
+  );
+}
+
+      // doc.text(`${label} No : ${safe(docNumber)}`, rightMetaX, metaY, { width: 180 * scale, align: 'right' });
+//       doc.font('Helvetica-Bold');
+// doc.text(`${label} No : ${safe(docNumber)}`, rightMetaX, metaY, {
+//   width: 180 * scale,
+//   align: 'right'
+// });
+// doc.font('Helvetica');
+// doc.font('Helvetica').fontSize(fsBody);
+
+// doc.text(`${label} No : `, rightMetaX, metaY, {
+//   width: 180 * scale,
+//   align: 'right',
+//   continued: true
+// });
+
+// doc.font('Helvetica-Bold');
+
+// doc.text(`${safe(docNumber)}`, {
+//   continued: false
+// });
+
+// doc.font('Helvetica');
+
+// Quotation No - label normal, number ONLY bold
+const quotationLabel = `${label} No : `;
+const quotationNumber = safe(docNumber);
+
+doc.font('Helvetica').fontSize(fsBody);
+
+const labelWidth = doc.widthOfString(quotationLabel);
+const numberWidth = doc.widthOfString(quotationNumber);
+const totalWidth = labelWidth + numberWidth;
+
+// Keep the complete line right-aligned
+const quotationX = rightMetaX + (180 * scale) - totalWidth;
+
+// Normal label
+doc.font('Helvetica').text(
+  quotationLabel,
+  quotationX,
+  metaY
+);
+
+// ONLY QTN number bold
+doc.font('Helvetica-Bold').text(
+  quotationNumber,
+  quotationX + labelWidth,
+  metaY
+);
+
+// Reset font
+doc.font('Helvetica');
       doc.text(`${label} Date : ${date ? new Date(date).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '-'}`, rightMetaX, metaY + 14 * scale, { width: 180 * scale, align: 'right' });
       if (referenceNo) doc.text(`Reference No : ${referenceNo}`, rightMetaX, metaY + 28 * scale, { width: 180 * scale, align: 'right' });
-      if (attn) doc.text(`Contact Person : ${attn}`, rightMetaX, metaY + 42 * scale, { width: 180 * scale, align: 'right' });
+      if (attn) doc.text(`Contact Person: ${attn}`, rightMetaX, metaY + 42 * scale, { width: 180 * scale, align: 'right' });
 
-      const trnY = metaY + 56 * scale;
-      doc.text(`TRN NO: ${COMPANY_TRN}`, left, trnY, { width: 245 * scale });
-      if (subject || isQuotation) {
-        doc.text(`Subject: ${safe(subject, isQuotation ? 'Commercial Quotation' : 'Tax Invoice')}`, left, trnY + 14 * scale, { width: contentW });
-      }
+      // const trnY = metaY + 56 * scale;
+      // doc.text(` Customer TRN NO: ${COMPANY_TRN}`, left, trnY, { width: 245 * scale });
+      // if (subject || isQuotation) {
+      //   doc.text(`Subject: ${safe(subject, isQuotation ? 'Commercial Quotation' : 'Tax Invoice')}`, left, trnY + 14 * scale, { width: contentW });
+      // }
+//       if (subject) {
+//   doc.text(
+//     `Subject: ${safe(subject)}`,
+//     left,
+//     trnY + 14 * scale,
+//     { width: contentW }
+//   );
+// }
 
-      let y0 = (isQuotation ? 303 : 292) * scale;
+      let y0 = (isQuotation ? 314 : 292) * scale;
       const headerH = 22 * scale;
       const rowH = (compact ? 65 : 82) * scale;
       const colNo = left;
@@ -1306,13 +1422,32 @@ export const generateBrandedPdf = async ({
         y += rowH;
       });
 
-      const totalQty = items.reduce((s, i) => s + Number(i.qty || 0), 0);
-      const totalRowH = 20 * scale;
-      doc.rect(left, y, contentW, totalRowH).stroke('#333333');
-      doc.font('Helvetica-Bold').fontSize(fsSmall)
-        .text(`Total Quantity: ${totalQty}`, colItem, y + 6 * scale, { width: colQty-colItem-4*scale, align:'right' })
-        .text(`Gross Amt: ${fmt(subTotal)}`, colRate - 18 * scale, y + 6 * scale, { width: right-colRate+18*scale, align:'right' });
-      y += totalRowH;
+      // const totalQty = items.reduce((s, i) => s + Number(i.qty || 0), 0);
+      // const totalRowH = 20 * scale;
+      // doc.rect(left, y, contentW, totalRowH).stroke('#333333');
+      // doc.font('Helvetica-Bold').fontSize(fsSmall)
+      //   .text(`Total Quantity: ${totalQty}`, colItem, y + 6 * scale, { width: colQty-colItem-4*scale, align:'right' })
+      //   .text(`Gross Amt: ${fmt(subTotal)}`, colRate - 18 * scale, y + 6 * scale, { width: right-colRate+18*scale, align:'right' });
+      // y += totalRowH;
+
+      // Total Quantity removed
+
+const totalRowH = 20 * scale;
+
+doc.rect(left, y, contentW, totalRowH).stroke('#333333');
+
+doc.font('Helvetica-Bold')
+  .fontSize(fsSmall)
+  .text(`Gross Amt: ${fmt(subTotal)}`,
+    colRate - 18 * scale,
+    y + 6 * scale,
+    {
+      width: right - colRate + 18 * scale,
+      align: 'right'
+    }
+  );
+
+y += totalRowH;
 
       const totalsX = right - 188 * scale;
       const valueX = right - 86 * scale;
@@ -1325,7 +1460,7 @@ export const generateBrandedPdf = async ({
           .text(fmt(value), valueX + 3 * scale, y + 5 * scale, { width: right-valueX-6*scale, align:'right' });
         y += totalLineH;
       };
-      if (Number(discount || 0) > 0) totalLine('Discount (Figure)', discount);
+      if (Number(discount || 0) > 0) totalLine('Discount', discount);
       totalLine(`Vat ${fmt(vatPercent).replace('.00','')}%`, vatAmount);
       totalLine('Total Value', totalAmount, true);
 
@@ -1443,17 +1578,92 @@ export const generateReceiptPdf = async ({
       doc.rect(0,0,W,H).fill('#FFFFFF');
 
       // top-left brand panel
-      doc.save().fillColor(NAVY).moveTo(0,0).lineTo(238,0).lineTo(190,92).lineTo(0,92).closePath().fill().restore();
-      doc.save().fillColor(GOLD).moveTo(184,0).lineTo(322,0).lineTo(294,34).lineTo(168,34).closePath().fill().restore();
-      doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(18).text('GIIAN', 34, 27);
-      doc.font('Helvetica').fontSize(8).text('BUSINESS SUITE', 34, 51, { characterSpacing: 1.1 });
+      // doc.save().fillColor(NAVY).moveTo(0,0).lineTo(238,0).lineTo(190,92).lineTo(0,92).closePath().fill().restore();
+      // doc.save().fillColor(GOLD).moveTo(184,0).lineTo(322,0).lineTo(294,34).lineTo(168,34).closePath().fill().restore();
+      // doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(18).text('GIIAN', 34, 27);
+      // doc.font('Helvetica').fontSize(8).text('BUSINESS SUITE', 34, 51, { characterSpacing: 1.1 });
 
+      // top-left brand panel
+doc.save().fillColor(NAVY)
+  .moveTo(0,0)
+  .lineTo(238,0)
+  .lineTo(190,92)
+  .lineTo(0,92)
+  .closePath()
+  .fill()
+  .restore();
+
+doc.save().fillColor(GOLD)
+  .moveTo(184,0)
+  .lineTo(322,0)
+  .lineTo(294,34)
+  .lineTo(168,34)
+  .closePath()
+  .fill()
+  .restore();
+
+// GIIAN logo
+const logoPath = path.join('assets', 'company', 'giian-logo.png');
+
+if (fs.existsSync(logoPath)) {
+  try {
+    doc.image(logoPath, 28, 18, {
+      fit: [55, 55],
+      align: 'center',
+      valign: 'center'
+    });
+  } catch {}
+}
+
+// GIIAN text
+doc.fillColor('#FFFFFF')
+  .font('Helvetica-Bold')
+  .fontSize(18)
+  .text('GIIAN', 92, 27);
+
+doc.font('Helvetica')
+  .fontSize(8)
+  .text('BUSINESS SUITE', 92, 51, {
+    characterSpacing: 1.1
+  });
       doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(29).text('RECEIPT', 320, 31, { width: 200, align: 'center' });
 
-      const contact = [companyName, companyAddress, companyEmail, website, companyPhone].filter(Boolean);
-      doc.font('Helvetica').fontSize(7.5).fillColor(TEXT);
-      contact.forEach((line, idx) => doc.text(line, 548, 18 + idx*13, { width: 245, align:'right' }));
+      // const contact = [companyName, companyAddress, companyEmail, website, companyPhone].filter(Boolean);
+      // doc.font('Helvetica').fontSize(7.5).fillColor(TEXT);
+      // contact.forEach((line, idx) => doc.text(line, 548, 18 + idx*13, { width: 245, align:'right' }));
 
+      // Top-right company details
+doc.font('Helvetica')
+  .fontSize(7.5)
+  .fillColor(TEXT);
+
+// Company name
+doc.text(
+  companyName,
+  548,
+  18,
+  {
+    width: 245,
+    align: 'right'
+  }
+);
+
+// Company address - below company name
+doc.font('Helvetica')
+  .fontSize(7.2)
+  .text(
+    `Nooraniva Building
+Plot number:152-0
+Hor Al Anz
+DUbai,UAE`,
+    548,
+    32,
+    {
+      width: 245,
+      align: 'right',
+      lineGap: 2
+    }
+  );
       // vertical receipt band
       doc.save().fillColor(NAVY).moveTo(790,170).lineTo(842,145).lineTo(842,555).lineTo(790,518).closePath().fill().restore();
       doc.save().fillColor(GOLD).moveTo(790,170).lineTo(842,145).lineTo(842,161).lineTo(790,186).closePath().fill().restore();
@@ -1470,10 +1680,31 @@ export const generateReceiptPdf = async ({
       const purpose = settlementText || (receiptType === 'Advance' ? 'Advance Payment Received' : receiptType === 'AdvanceAdjustment' ? 'Advance Adjustment' : 'Payment Received');
 
       let y=128;
-      doc.fillColor(TEXT).font('Helvetica').fontSize(9).text('No.',28,y).font('Helvetica-Bold').text(receiptNo,63,y); dottedLine(doc,63,y+13,255);
+      // doc.fillColor(TEXT).font('Helvetica').fontSize(9).text('No.',28,y).font('Helvetica-Bold').text(receiptNo,63,y); dottedLine(doc,63,y+13,255);
+      doc.fillColor(TEXT)
+  .font('Helvetica')
+  .fontSize(9)
+  .text('No.', 28, y);
+
+doc.font('Helvetica-Bold')
+  .fontSize(14)
+  .text(receiptNo, 63, y);
+
+dottedLine(doc, 63, y + 16, 255);
       doc.font('Helvetica').text('Date',585,y).font('Helvetica-Bold').text(dateText,625,y); dottedLine(doc,625,y+13,760);
 
-      y+=48; doc.font('Helvetica').text('Received with thanks from',28,y).font('Helvetica-Bold').text(customerName,175,y,{width:570}); dottedLine(doc,175,y+13,760);
+      // y+=48; doc.font('Helvetica').text('Received with thanks from',28,y).font('Helvetica-Bold').text(`M/S ${customerName}`,175,y,{width:570}); dottedLine(doc,175,y+13,760);
+      y += 48;
+
+doc.font('Helvetica')
+  .text('Received with thanks from ', 28, y, {
+    continued: true
+  });
+
+doc.font('Helvetica-Bold')
+  .text(`M/S ${customerName}`);
+
+dottedLine(doc, 175, y + 13, 760);
       y+=42; doc.font('Helvetica').text('Amount of (in words)',28,y).font('Helvetica').text(amountInWords(amount),175,y,{width:570}); dottedLine(doc,175,y+13,760);
 
       y+=52; doc.font('Helvetica').text('By',28,y);

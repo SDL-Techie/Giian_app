@@ -46,6 +46,17 @@ const quotationSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+  subject: {
+  type: String,
+  trim: true,
+  default: "",
+},
+
+deliveryTime: {
+  type: String,
+  trim: true,
+  default: "",
+},
     warrantyTerms: {
       type: String,
       trim: true,

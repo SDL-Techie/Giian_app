@@ -11,7 +11,7 @@ import { logger } from "../utils/logger.js";
 // @route  POST /api/v1/quotations
 export const createQuotation = async (req, res, next) => {
   try {
-    const { customer: customerId, dateOfQuotation, attn, warrantyTerms, items, discount, vatPercent } = req.body;
+    const { customer: customerId, dateOfQuotation, subject, attn, deliveryTime, warrantyTerms, items, discount, vatPercent } = req.body;
 
     if (!customerId || !isValidObjectId(customerId)) {
       return res.status(400).json({ success: false, message: "A valid customer is required" });
@@ -50,6 +50,8 @@ export const createQuotation = async (req, res, next) => {
       dateOfQuotation,
       // ATTN defaults to the customer's contact person name unless the user overrides it.
       attn: attn || customer.contactPersonName,
+      subject: String(subject || "").trim(),
+      deliveryTime: String(deliveryTime || "").trim(),
       warrantyTerms: String(warrantyTerms || "").trim(),
       items: lineItems,
       discount: discount || 0,
@@ -66,7 +68,7 @@ export const createQuotation = async (req, res, next) => {
     const pdfItems = lineItems.map((i) => ({ name: productMap.get(String(i.product))?.name || "Product", imageUrl: productMap.get(String(i.product))?.productImageUrl, qty: i.qty, price: i.price, total: i.totalPrice }));
     let pdfWarning;
     try {
-      quotation.pdfDubaiUrl = await generateBrandedPdf({ title:"QUOTATION", docNumber:quotation.quotationNo, fileNamePrefix:"quotation", region:"dubai", date:dateOfQuotation, attn:quotation.attn, customer, items:pdfItems, discount:discount||0, vatPercent:vatPercent||0, subTotal:totals.subTotal, vatAmount:totals.vatAmount, totalAmount:totals.totalAmount, currency:"AED", warrantyTerms: quotation.warrantyTerms });
+      quotation.pdfDubaiUrl = await generateBrandedPdf({ title:"QUOTATION", docNumber:quotation.quotationNo, fileNamePrefix:"quotation", region:"dubai", date:dateOfQuotation, attn:quotation.attn,   subject: quotation.subject, deliveryTime: quotation.deliveryTime, customer, items:pdfItems, discount:discount||0, vatPercent:vatPercent||0, subTotal:totals.subTotal, vatAmount:totals.vatAmount, totalAmount:totals.totalAmount, currency:"AED", warrantyTerms: quotation.warrantyTerms });
       quotation.pdfUrl = quotation.pdfDubaiUrl;
       await quotation.save();
     } catch (pdfError) {
@@ -238,7 +240,7 @@ export const generateQuotationPdf = async (req, res, next) => {
     const items = quotation.items.map(i => ({ name:i.product?.name || "Product", imageUrl:i.product?.productImageUrl, qty:i.qty, price:i.price, total:i.totalPrice }));
     const url = await generateBrandedPdf({
       title:"QUOTATION", docNumber:quotation.quotationNo, fileNamePrefix:"quotation", region:"dubai", pageSize,
-      date:quotation.dateOfQuotation, attn:quotation.attn, customer:quotation.customer, items,
+      date:quotation.dateOfQuotation, attn:quotation.attn, subject: quotation.subject,  deliveryTime: quotation.deliveryTime,customer:quotation.customer, items,
       discount:quotation.discount||0, vatPercent:quotation.vatPercent||0, subTotal:quotation.subTotal,
       vatAmount:quotation.vatAmount, totalAmount:quotation.totalAmount, currency:"AED",
       warrantyTerms:quotation.warrantyTerms || "",
@@ -285,6 +287,8 @@ export const approveQuotation = async (req, res, next) => {
       pageSize: "A4",
       date: populated.dateOfQuotation,
       attn: populated.attn,
+      subject: populated.subject,
+      deliveryTime: populated.deliveryTime,
       customer: populated.customer,
       items,
       discount: populated.discount || 0,

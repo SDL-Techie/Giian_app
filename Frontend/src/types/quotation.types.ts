@@ -84,6 +84,8 @@ export interface CreateQuotationPayload {
   customer: string;
   dateOfQuotation: string;
   attn?: string;
+  subject?: string;
+  deliveryTime?: string;
   warrantyTerms?: string;
   items: { product: string; qty: number; price: number }[];
   discount?: number;
