@@ -1202,6 +1202,8 @@ export const generateBrandedPdf = async ({
   subTotal = 0,
   vatAmount = 0,
   totalAmount = 0,
+  customerTrn = '',
+  companyTrn = '',
   currency = 'AED',
   quoteValidity = '30 Days',
   deliveryTime = '',
@@ -1210,6 +1212,7 @@ export const generateBrandedPdf = async ({
   approved = false,
   approvedBy = '',
   approvedAt = null,
+  createdBy = null, 
 }) => {
   const size = String(pageSize).toUpperCase() === 'A5' ? 'A5' : 'A4';
   const dim = PAGE[size];
@@ -1219,6 +1222,7 @@ export const generateBrandedPdf = async ({
   const fileName = `${fileNamePrefix}-${region}-${size.toLowerCase()}-${docNumber}-${Date.now()}.pdf`;
   const filePath = path.join(UPLOAD_DIR, fileName);
   const productImages = await Promise.all(items.map((i) => fetchImage(i.imageUrl)));
+  const esignBuffer = approved ? await fetchImage(createdBy?.esignUrl || '') : null;
 
   return new Promise((resolve, reject) => {
     try {
@@ -1246,64 +1250,26 @@ export const generateBrandedPdf = async ({
       doc.text(`Customer Name: M/S. ${safe(customer?.companyName)}`, left, metaY, { width: 300 * scale });
       if (customer?.companyAddress) doc.text(`Address: ${safe(customer.companyAddress)}`, left, metaY + 14 * scale, { width: 310 * scale });
       if (customer?.telephoneNumber) doc.text(`Tel: ${safe(customer.telephoneNumber)}`, left, metaY + 28 * scale, { width: 210 * scale });
-//       if (customer?.email) doc.text(`Email: ${safe(customer.email)}`, left, metaY + 42 * scale, { width: 250 * scale });
 
-// // Attn - below Email
-// if (attn) {
-//   doc.text(
-//     `Attn: ${safe(attn)}`,
-//     left,
-//     metaY + 56 * scale,
-//     { width: 250 * scale }
-//   );
-// }
-// // Customer TRN - below Attn
-// doc.text(
-//   `Customer TRN NO: ${COMPANY_TRN}`,
-//   left,
-//   metaY + 70 * scale,
-//   { width: 245 * scale }
-// );
+      
+     const lineStep = 14 * scale;          // gap between lines
+let ly = metaY + 42 * scale;          // where the next line will be drawn
 
-if (customer?.email) {
-  doc.text(
-    `Email: ${safe(customer.email)}`,
-    left,
-    metaY + 42 * scale,
-    { width: 250 * scale }
-  );
-}
+const addLeft = (text, w = 250) => {
+  doc.text(text, left, ly, { width: w * scale });
+  ly += lineStep;                     // move down for the next line
+};
 
-// Attn - only when available
-if (attn) {
-  doc.text(
-    `Attn: ${safe(attn)}`,
-    left,
-    metaY + 56 * scale,
-    { width: 250 * scale }
-  );
-}
-
-// Customer TRN
-const trnY = attn
-  ? metaY + 70 * scale
-  : metaY + 56 * scale;
-
-doc.text(
-  `Customer TRN NO: ${COMPANY_TRN}`,
-  left,
-  trnY,
-  { width: 245 * scale }
-);
-// Subject - below TRN
+if (customer?.email) addLeft(`Email: ${safe(customer.email)}`);
+if (attn)            addLeft(`Attn: ${safe(attn)}`);
+if (customerTrn)     addLeft(`Customer TRN NO: ${safe(customerTrn)}`, 245);
+if (companyTrn)      addLeft(`GIIAN TRN NO: ${safe(companyTrn)}`, 245);
 if (subject) {
-  doc.text(
-    `Subject: ${safe(subject)}`,
-    left,
-    metaY + 84 * scale,
-    { width: contentW }
-  );
+  doc.text(`Subject: ${safe(subject)}`, left, ly, { width: contentW });
+  ly += lineStep;
 }
+
+
 
       // doc.text(`${label} No : ${safe(docNumber)}`, rightMetaX, metaY, { width: 180 * scale, align: 'right' });
 //       doc.font('Helvetica-Bold');
@@ -1375,7 +1341,7 @@ doc.font('Helvetica');
 //   );
 // }
 
-      let y0 = (isQuotation ? 314 : 292) * scale;
+let y0 = Math.max((isQuotation ? 314 : 292) * scale, ly + 8 * scale);
       const headerH = 22 * scale;
       const rowH = (compact ? 65 : 82) * scale;
       const colNo = left;
@@ -1763,6 +1729,11 @@ if (esignBuffer) {
     // Ignore invalid e-signature image
   }
 }
+
+  // Company stamp stays static
+        if (approvalAssetsEnabled) {
+          try { if (fs.existsSync(stampPath)) doc.image(stampPath, baseX, sigY + 10*scale, { fit:[65*scale,65*scale] }); } catch {}
+        }
 
 // Company stamp
 // const approvalAssetsEnabled =

@@ -88,6 +88,8 @@ deliveryTime: {
       type: Number,
       required: true,
     },
+    customerTrn: { type: String, trim: true, default: "" },
+    companyTrn:  { type: String, trim: true, default: "" }, // GIIAN / admin TRN
     salesPerson: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

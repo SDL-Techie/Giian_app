@@ -54,7 +54,7 @@
 
 import api, { resolveApiFileUrl } from './api';
 import { ApiResponse } from '../types/api.types';
-import { Quotation, CreateQuotationPayload } from '../types/quotation.types';
+import { Quotation, CreateQuotationPayload , UpdateQuotationPayload} from '../types/quotation.types';
 
 export const quotationService = {
   getAllQuotations: async (status?: string, customerId?: string): Promise<Quotation[]> => {
@@ -97,6 +97,11 @@ export const quotationService = {
     const res = await api.get<ApiResponse<Quotation[]>>('/quotations/reports/customer-wise', { params });
     return res.data.data || [];
   },
+
+  updateQuotation: async (id: string, payload: UpdateQuotationPayload): Promise<Quotation> => {
+  const res = await api.put<ApiResponse<Quotation>>(`/quotations/${id}`, payload);
+  const q:any = res.data.data!; return {...q, pdfUrl: resolveApiFileUrl(q.pdfUrl), pdfDubaiUrl: resolveApiFileUrl(q.pdfDubaiUrl)};
+},
 
   getSalesmanWiseQuotationReport: async (salesPersonId: string, from?: string, to?: string): Promise<Quotation[]> => {
     const params: Record<string, string> = { salesPersonId };
