@@ -12,7 +12,7 @@ const saveDocs = async (files, userId) => {
   }
   return saved;
 };
-const fields = ["companyName", "telephoneNumber", "email", "mobileNumber", "contactPersonName", "companyAddress", "creditLimit"];
+const fields = ["companyName", "telephoneNumber", "email", "mobileNumber", "contactPersonName", "companyAddress", "creditLimit","trn"];
 
 const validateCustomerInput = (body, partial = false) => {
   if (!partial && !String(body.companyName || "").trim()) return "Name of the company is required";

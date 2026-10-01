@@ -1,3 +1,72 @@
+// // import { Role } from './role.types';
+
+// // export interface User {
+// //   _id: string;
+// //   name: string;
+// //   email: string;
+// //   phoneno?: string;
+// //   isAdmin: boolean;
+// //   role?: Role | string | null;
+// //   roleId?: string;
+// //   status: 'Active' | 'Inactive';
+// //   isActive?: boolean;
+// //   createdBy?: string;
+// //   createdAt?: string;
+// //   updatedAt?: string;
+// // }
+
+// // export interface CreateUserPayload {
+// //   name: string;
+// //   email: string;
+// //   password?: string;
+// //   phoneno?: string;
+// //   roleId?: string;
+// // }
+
+// // export interface UpdateUserPayload {
+// //   name?: string;
+// //   phoneno?: string;
+// //   email?: string;
+// //   roleId?: string;
+// // }
+
+
+
+// import { Role } from './role.types';
+
+// export interface User {
+//   _id: string;
+//   name: string;
+//   email: string;
+//   phoneno?: string;
+//   isAdmin: boolean;
+//   role?: Role | string | null;
+//   roleId?: string;
+//   esignUrl?: string;
+//   status: 'Active' | 'Inactive';
+//   isActive?: boolean;
+//   createdBy?: string;
+//   createdAt?: string;
+//   updatedAt?: string;
+// }
+
+// export interface CreateUserPayload {
+//   name: string;
+//   email: string;
+//   password?: string;
+//   phoneno?: string;
+//   roleId?: string;
+//   esign?: File;
+// }
+
+// export interface UpdateUserPayload {
+//   name?: string;
+//   phoneno?: string;
+//   email?: string;
+//   roleId?: string;
+//   esign?: File;
+// }
+
 // import { Role } from './role.types';
 
 // export interface User {
@@ -39,6 +108,7 @@ export interface User {
   name: string;
   email: string;
   phoneno?: string;
+  trn?: string;
   isAdmin: boolean;
   role?: Role | string | null;
   roleId?: string;
@@ -55,6 +125,7 @@ export interface CreateUserPayload {
   email: string;
   password?: string;
   phoneno?: string;
+  trn?: string;
   roleId?: string;
   esign?: File;
 }
@@ -62,6 +133,7 @@ export interface CreateUserPayload {
 export interface UpdateUserPayload {
   name?: string;
   phoneno?: string;
+  trn?: string;
   email?: string;
   roleId?: string;
   esign?: File;
