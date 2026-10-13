@@ -53,7 +53,7 @@
 //       attn: attn || customer.contactPersonName,
 //       subject: String(subject || "").trim(),
 //       deliveryTime: String(deliveryTime || "").trim(),
-//       warrantyTerms: String(warrantyTerms || "").trim(),
+//       warrantyTerms: String(warrantyTerms || ""),
 //       items: lineItems,
 //       discount: discount || 0,
 //       subTotal: totals.subTotal,
@@ -68,7 +68,7 @@
 
 //     // Dubai-only project: generate the GIIAN AED + VAT proposal.
 //     const productMap = new Map(products.map((p) => [String(p._id), p]));
-//     const pdfItems = lineItems.map((i) => ({ name: productMap.get(String(i.product))?.name || "Product", imageUrl: productMap.get(String(i.product))?.productImageUrl, qty: i.qty, price: i.price, total: i.totalPrice }));
+//     const pdfItems = lineItems.map((i) => ({ description: i.description || productMap.get(String(i.product))?.name || "Product", name: productMap.get(String(i.product))?.name || "Product", imageUrl: productMap.get(String(i.product))?.productImageUrl, qty: i.qty, price: i.price, total: i.totalPrice }));
 //     let pdfWarning;
 //     try {
 //       quotation.pdfDubaiUrl = await generateBrandedPdf({ title:"QUOTATION", docNumber:quotation.quotationNo, fileNamePrefix:"quotation", region:"dubai", date:dateOfQuotation, attn:quotation.attn,   subject: quotation.subject, deliveryTime: quotation.deliveryTime, customer, items:pdfItems, discount:discount||0, vatPercent:vatPercent||0, subTotal:totals.subTotal, vatAmount:totals.vatAmount, totalAmount:totals.totalAmount,  customerTrn: quotation.customerTrn, companyTrn: quotation.companyTrn, currency:"AED", warrantyTerms: quotation.warrantyTerms });
@@ -224,7 +224,7 @@
 // //     if (!isValidObjectId(req.params.id)) return res.status(400).json({ success:false, message:"Invalid quotation id" });
 // //     const quotation = await Quotation.findById(req.params.id).populate("customer").populate("items.product", "name itemCode productImageUrl");
 // //     if (!quotation) return res.status(404).json({ success:false, message:"Quotation not found" });
-// //     const items = quotation.items.map(i => ({ name:i.product?.name || "Product", imageUrl:i.product?.productImageUrl, qty:i.qty, price:i.price, total:i.totalPrice }));
+// //     const items = quotation.items.map(i => ({ description:i.description || i.product?.name || "Product", name:i.product?.name || "Product", imageUrl:i.product?.productImageUrl, qty:i.qty, price:i.price, total:i.totalPrice }));
 // //     const url = await generateBrandedPdf({ title:"QUOTATION", docNumber:quotation.quotationNo, fileNamePrefix:"quotation", region:"dubai", pageSize, date:quotation.dateOfQuotation, attn:quotation.attn, customer:quotation.customer, items, discount:quotation.discount||0, vatPercent:quotation.vatPercent||0, subTotal:quotation.subTotal, vatAmount:quotation.vatAmount, totalAmount:quotation.totalAmount, currency:"AED", warrantyTerms:quotation.warrantyTerms || "" });
 // //     return res.json({ success:true, message:`${pageSize} quotation generated`, data:{url,pageSize} });
 // //   } catch (e) { next(e); }
@@ -241,7 +241,7 @@
 //       .populate("createdBy", "name esignUrl")
 //       .populate("items.product", "name itemCode productImageUrl");
 //     if (!quotation) return res.status(404).json({ success:false, message:"Quotation not found" });
-//     const items = quotation.items.map(i => ({ name:i.product?.name || "Product", imageUrl:i.product?.productImageUrl, qty:i.qty, price:i.price, total:i.totalPrice }));
+//     const items = quotation.items.map(i => ({ description:i.description || i.product?.name || "Product", name:i.product?.name || "Product", imageUrl:i.product?.productImageUrl, qty:i.qty, price:i.price, total:i.totalPrice }));
 //     const url = await generateBrandedPdf({
 //       title:"QUOTATION", docNumber:quotation.quotationNo, fileNamePrefix:"quotation", region:"dubai", pageSize,
 //       date:quotation.dateOfQuotation, attn:quotation.attn, subject: quotation.subject,  deliveryTime: quotation.deliveryTime,customer:quotation.customer, items,  customerTrn: quotation.customerTrn,   // add
@@ -385,7 +385,7 @@
 //     } else {
 //       // Keep existing items (re-calculated so totals stay consistent with discount/VAT changes)
 //       lineItems = calculateLineItems(
-//         quotation.items.map((i) => ({ product: i.product, qty: i.qty, price: i.price })),
+//         quotation.items.map((i) => ({ product: i.product, description: i.description, qty: i.qty, price: i.price })),
 //         "price"
 //       );
 //     }
@@ -441,7 +441,7 @@
 //     const products = await Product.find({ _id: { $in: productIds } });
 //     const productMap = new Map(products.map((p) => [String(p._id), p]));
 //     const pdfItems = quotation.items.map((i) => ({
-//       name: productMap.get(String(i.product))?.name || "Product",
+//       description: i.description || productMap.get(String(i.product))?.name || "Product", name: productMap.get(String(i.product))?.name || "Product",
 //       imageUrl: productMap.get(String(i.product))?.productImageUrl,
 //       qty: i.qty,
 //       price: i.price,
@@ -556,7 +556,7 @@ export const createQuotation = async (req, res, next) => {
       attn: attn || customer.contactPersonName,
       subject: String(subject || "").trim(),
       deliveryTime: String(deliveryTime || "").trim(),
-      warrantyTerms: String(warrantyTerms || "").trim(),
+      warrantyTerms: String(warrantyTerms || ""),
       items: lineItems,
       discount: discount || 0,
       subTotal: totals.subTotal,
@@ -573,7 +573,7 @@ export const createQuotation = async (req, res, next) => {
 
     // Dubai-only project: generate the GIIAN AED + VAT proposal.
     const productMap = new Map(products.map((p) => [String(p._id), p]));
-    const pdfItems = lineItems.map((i) => ({ name: productMap.get(String(i.product))?.name || "Product", imageUrl: productMap.get(String(i.product))?.productImageUrl, qty: i.qty, price: i.price, total: i.totalPrice }));
+    const pdfItems = lineItems.map((i) => ({ description: i.description || productMap.get(String(i.product))?.name || "Product", name: productMap.get(String(i.product))?.name || "Product", imageUrl: productMap.get(String(i.product))?.productImageUrl, qty: i.qty, price: i.price, total: i.totalPrice }));
     let pdfWarning;
     try {
       quotation.pdfDubaiUrl = await generateBrandedPdf({
@@ -722,7 +722,7 @@ export const generateQuotationPdf = async (req, res, next) => {
       .populate("createdBy", "name esignUrl")
       .populate("items.product", "name itemCode productImageUrl");
     if (!quotation) return res.status(404).json({ success:false, message:"Quotation not found" });
-    const items = quotation.items.map(i => ({ name:i.product?.name || "Product", imageUrl:i.product?.productImageUrl, qty:i.qty, price:i.price, total:i.totalPrice }));
+    const items = quotation.items.map(i => ({ description:i.description || i.product?.name || "Product", name:i.product?.name || "Product", imageUrl:i.product?.productImageUrl, qty:i.qty, price:i.price, total:i.totalPrice }));
     const url = await generateBrandedPdf({
       title:"QUOTATION", docNumber:quotation.quotationNo, fileNamePrefix:"quotation", region:"dubai", pageSize,
       date:quotation.dateOfQuotation, attn:quotation.attn, subject: quotation.subject, deliveryTime: quotation.deliveryTime,
@@ -865,7 +865,7 @@ export const editQuotation = async (req, res, next) => {
     } else {
       // Keep existing items (re-calculated so totals stay consistent with discount/VAT changes)
       lineItems = calculateLineItems(
-        quotation.items.map((i) => ({ product: i.product, qty: i.qty, price: i.price })),
+        quotation.items.map((i) => ({ product: i.product, description: i.description, qty: i.qty, price: i.price })),
         "price"
       );
     }
@@ -922,7 +922,7 @@ export const editQuotation = async (req, res, next) => {
     const products = await Product.find({ _id: { $in: productIds } });
     const productMap = new Map(products.map((p) => [String(p._id), p]));
     const pdfItems = quotation.items.map((i) => ({
-      name: productMap.get(String(i.product))?.name || "Product",
+      description: i.description || productMap.get(String(i.product))?.name || "Product", name: productMap.get(String(i.product))?.name || "Product",
       imageUrl: productMap.get(String(i.product))?.productImageUrl,
       qty: i.qty,
       price: i.price,

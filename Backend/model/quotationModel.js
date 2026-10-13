@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const quotationItemSchema = new mongoose.Schema(
   {
+    description: { type: String, default: "", maxlength: 5000 },
     product: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",

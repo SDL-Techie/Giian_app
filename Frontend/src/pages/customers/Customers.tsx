@@ -3061,14 +3061,7 @@ export const Customers: React.FC = () => {
         size="lg"
       >
         <form onSubmit={handleSaveCustomer} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <Input
-            label="Name of the Company"
-            placeholder="e.g. Acme Corporation"
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
-            error={formErrors.companyName}
-            isRequired
-          />
+          <div className="input-group"><label className="input-label">Name of the Company *</label><textarea required rows={2} className="input-field" value={companyName} onChange={e=>setCompanyName(e.target.value)} placeholder="Company name (Enter for next line)" style={{whiteSpace:'pre-wrap'}} />{formErrors.companyName && <small style={{color:'#b42318'}}>{formErrors.companyName}</small>}</div>
 
           <div className="form-grid-2">
             <Input
@@ -3109,12 +3102,7 @@ export const Customers: React.FC = () => {
             />
           </div>
 
-          <Input
-            label="Address of the Company"
-            placeholder="e.g. 100 Main Street, Suite 200, Metropolis"
-            value={companyAddress}
-            onChange={(e) => setCompanyAddress(e.target.value)}
-          />
+          <div className="input-group"><label className="input-label">Address of the Company</label><textarea rows={4} className="input-field" value={companyAddress} onChange={e=>setCompanyAddress(e.target.value)} placeholder="Company address — Enter starts a new line" style={{whiteSpace:'pre-wrap'}} /></div>
 
           <div className="form-grid-2">
             <Input

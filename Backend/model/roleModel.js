@@ -28,6 +28,7 @@ const roleSchema = new mongoose.Schema(
     permissions: {
       customers: { type: modulePermissionSchema, default: () => ({}) },
       products: { type: modulePermissionSchema, default: () => ({}) },
+      measurements: { type: modulePermissionSchema, default: () => ({}) },
       purchase: { type: modulePermissionSchema, default: () => ({}) },
       sales: { type: modulePermissionSchema, default: () => ({}) },
       quotations: { type: modulePermissionSchema, default: () => ({}) },

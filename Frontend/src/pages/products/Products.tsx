@@ -4,6 +4,7 @@ import {
   Plus,
   Search,
   FolderTree,
+  Ruler,
   FileSpreadsheet,
   Edit2,
   Trash2,
@@ -13,6 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import productService from '../../services/product.service';
 import categoryService from '../../services/category.service';
+import { measurementService, Measurement } from '../../services/measurement.service';
 import { Product, CreateProductPayload } from '../../types/product.types';
 import { Category } from '../../types/category.types';
 import Card from '../../components/common/card/Card';
@@ -33,12 +35,28 @@ export const Products: React.FC = () => {
   const canCreate = hasPermission('products', 'create');
   const canModify = hasPermission('products', 'modify');
   const canReport = hasPermission('products', 'report');
+  const canCreateMeasurement = hasPermission('measurements','create');
+  const canModifyMeasurement = hasPermission('measurements','modify');
+  const canViewMeasurement = hasPermission('measurements','view') || hasPermission('products','view');
 
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'report'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'measurements' | 'report'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [reportProducts, setReportProducts] = useState<Product[]>([]);
   const [isReportLoading, setIsReportLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [measurements,setMeasurements] = useState<Measurement[]>([]);
+  const [editingMeasurement,setEditingMeasurement] = useState<Measurement|null>(null);
+  const [measurementOpen,setMeasurementOpen] = useState(false);
+  const [measurementName,setMeasurementName] = useState('');
+  const [measurementAbbreviation,setMeasurementAbbreviation] = useState('');
+  const [measurementStatus,setMeasurementStatus] = useState<'Active'|'Inactive'>('Active');
+  const [measurementSaving,setMeasurementSaving] = useState(false);
+  const refreshMeasurements = useCallback(async()=>{ try{setMeasurements(await measurementService.getAll());}catch(e:any){toast.error(e.message||'Unable to load measurements');} },[toast]);
+  useEffect(()=>{void refreshMeasurements();},[refreshMeasurements]);
+  const openMeasurement = (row:Measurement|null=null)=>{setEditingMeasurement(row);setMeasurementName(row?.name||'');setMeasurementAbbreviation(row?.abbreviation||'');setMeasurementStatus(row?.status||'Active');setMeasurementOpen(true);};
+  const saveMeasurement = async(e:React.FormEvent)=>{e.preventDefault();if(!measurementName.trim()){toast.error('Measurement name is required');return;}setMeasurementSaving(true);try{const payload={name:measurementName.trim(),abbreviation:measurementAbbreviation.trim(),status:measurementStatus};if(editingMeasurement)await measurementService.update(editingMeasurement._id,payload);else await measurementService.create(payload);setMeasurementOpen(false);await refreshMeasurements();toast.success('Measurement saved');}catch(e:any){toast.error(e.message||'Unable to save measurement');}finally{setMeasurementSaving(false);}};
+  const deleteMeasurement = async(row:Measurement)=>{if(!window.confirm(`Delete measurement "${row.name}"?`))return;try{await measurementService.remove(row._id);await refreshMeasurements();toast.success('Measurement deleted');}catch(e:any){toast.error(e.message||'Cannot delete measurement in use');}};
+
   const [isLoading, setIsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
 
@@ -236,28 +254,23 @@ export const Products: React.FC = () => {
           <h1 className="page-title">Products & Categories</h1>
           <p className="page-subtitle">Product catalogue, categorization and inventory item codes</p>
         </div>
-        {canCreate && (
+        {(canCreate || canCreateMeasurement) && (
           <div style={{ display: 'flex', gap: '10px' }}>
-            <Button
-              variant="outline"
-              icon={<Plus size={16} />}
-              onClick={openCreateCategory}
-            >
-              New Category
-            </Button>
-            <Button
+            {canCreateMeasurement && <Button variant="outline" icon={<Plus size={16}/>} onClick={()=>openMeasurement()}>Create Measurement</Button>}
+            {canCreate && <Button variant="outline" icon={<Plus size={16} />} onClick={openCreateCategory}>New Category</Button>}
+            {canCreate && <Button
               variant="primary"
               icon={<Plus size={16} />}
               onClick={openCreateProduct}
               id="btn-create-product"
             >
               Create Product
-            </Button>
+            </Button>}
           </div>
         )}
       </div>
 
-      {activeTab !== 'report' && (
+      {(activeTab === 'products' || activeTab === 'categories') && (
         <DataTransferBar
           module={activeTab === 'categories' ? 'categories' : 'products'}
           onImported={() => void loadData()}
@@ -279,6 +292,7 @@ export const Products: React.FC = () => {
           <FolderTree size={16} />
           <span>Categories</span>
         </button>
+        {canViewMeasurement && <button className={`page-tab-btn ${activeTab === 'measurements' ? 'active' : ''}`} onClick={()=>setActiveTab('measurements')}><Ruler size={16}/><span>Measurements</span></button>}
         {canReport && (
           <button
             className={`page-tab-btn ${activeTab === 'report' ? 'active' : ''}`}
@@ -440,6 +454,21 @@ export const Products: React.FC = () => {
         </Card>
       )}
 
+      {activeTab === 'measurements' && canViewMeasurement && (
+        <Card title="Measurement Directory">
+          <div className="category-hierarchy-item" style={{fontWeight:600}}><span>Measurement / Unit</span><span>Actions</span></div>
+          {measurements.map(m=><div key={m._id} className="category-hierarchy-item"><div><strong>{m.name}</strong> {m.abbreviation && <span style={{opacity:.7}}>({m.abbreviation})</span>} {m.status==='Inactive' && <Badge variant="warning">Inactive</Badge>}</div>{canModifyMeasurement && <div className="table-actions"><button className="action-icon-btn btn-edit" aria-label={`Edit ${m.name}`} onClick={()=>openMeasurement(m)}><Edit2 size={16}/></button><button className="action-icon-btn btn-delete" aria-label={`Delete ${m.name}`} onClick={()=>void deleteMeasurement(m)}><Trash2 size={16}/></button></div>}</div>)}
+          {measurements.length===0 && <p>No measurements yet. Create one to get started.</p>}
+        </Card>
+      )}
+      <Modal isOpen={measurementOpen} onClose={()=>setMeasurementOpen(false)} title={editingMeasurement?'Edit Measurement':'Create Measurement'}>
+        <form onSubmit={saveMeasurement} style={{display:'grid',gap:16}}>
+          <label>Measurement name *<input className="input-field" required maxLength={100} value={measurementName} onChange={e=>setMeasurementName(e.target.value)} placeholder="e.g. Pieces, Kilograms" /></label>
+          <label>Symbol / abbreviation<input className="input-field" maxLength={20} value={measurementAbbreviation} onChange={e=>setMeasurementAbbreviation(e.target.value)} placeholder="e.g. pcs, kg" /></label>
+          <label>Status<select className="input-field" value={measurementStatus} onChange={e=>setMeasurementStatus(e.target.value as 'Active'|'Inactive')}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:10}}><Button type="button" variant="outline" onClick={()=>setMeasurementOpen(false)}>Cancel</Button><Button type="submit" disabled={measurementSaving}>{measurementSaving?'Saving...':'Save Measurement'}</Button></div>
+        </form>
+      </Modal>
       {activeTab === 'report' && (
         <Card title="Full Product Catalogue Report">
           <Table
@@ -484,11 +513,11 @@ export const Products: React.FC = () => {
               error={productErrors.itemCode}
               isRequired
             />
-            <Input
+            <Select
               label="Unit of Measure (optional)"
-              placeholder="e.g. Pcs, Kg, Box, Ltr"
               value={unitOfMeasure}
               onChange={(e) => setUnitOfMeasure(e.target.value)}
+              options={[{value:'',label:'Select Measurement'},...measurements.filter(m=>m.status==='Active').map(m=>({value:m.name,label:m.abbreviation?`${m.name} (${m.abbreviation})`:m.name})),...(unitOfMeasure && !measurements.some(m=>m.name===unitOfMeasure)?[{value:unitOfMeasure,label:unitOfMeasure}]:[])]}
             />
           </div>
 

@@ -1,4 +1,4 @@
-export type RoleModule = 'customers' | 'products' | 'purchase' | 'sales' | 'quotations' | 'receipts' | 'users' | 'vat';
+export type RoleModule = 'customers' | 'products' | 'measurements' | 'purchase' | 'sales' | 'quotations' | 'receipts' | 'users' | 'vat';
 export type RoleAction = 'create' | 'view' | 'modify' | 'report';
 
 export interface ModulePermission {
@@ -11,6 +11,7 @@ export interface ModulePermission {
 export interface RolePermissions {
   customers?: ModulePermission;
   products?: ModulePermission;
+  measurements?: ModulePermission;
   purchase?: ModulePermission;
   sales?: ModulePermission;
   quotations?: ModulePermission;

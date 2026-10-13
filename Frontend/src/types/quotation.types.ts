@@ -5,7 +5,8 @@
 
 // export interface QuotationItem {
 //   product: Product | { _id: string; name: string; itemCode?: string } | string;
-//   qty: number;
+//   description?: string;
+  qty: number;
 //   price: number;
 //   totalPrice: number;
 // }
@@ -48,7 +49,7 @@
 //   customerTrn?: string;
 // companyTrn?: string;
 //   warrantyTerms?: string;
-//   items: { product: string; qty: number; price: number }[];
+//   items: { product: string; qty: number; price: number; description?: string }[];
 //   discount?: number;
 //   vatPercent?: number;
 //   salesPerson?: string;
@@ -106,7 +107,7 @@ export interface CreateQuotationPayload {
   customerTrn?: string;
 companyTrn?: string;
   warrantyTerms?: string;
-  items: { product: string; qty: number; price: number }[];
+  items: { product: string; qty: number; price: number; description?: string }[];
   discount?: number;
   vatPercent?: number;
   salesPerson?: string;
